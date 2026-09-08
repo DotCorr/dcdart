@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# core/bench/elision-delta.sh — how much does ADR-0025's pass 3 actually remove?
+#
+#   bash core/bench/elision-delta.sh [file.dart ...]
+#
+# With no arguments it reports every benchmark and every example that
+# allocates.
+#
+# WHY THIS EXISTS. `elideRedundantRetainReleasePairs` runs inside
+# `lowerToDCModule`, so `dc-objdump --arc` reported only what SURVIVED it. The
+# pass's unit tests prove THE PASS FIRES. Nothing proved HOW MUCH IT REMOVES
+# ON A REAL PROGRAM, and only the second question decides whether an ARC
+# benchmark is measuring ARC or measuring a missing optimisation (GAP-0062).
+#
+# Measured on 2026-08-26, before any fix:
+#
+#     tree-traversal    6 retains ->  4    removed 2  (33%)
+#     json             19 retains -> 18    removed 1  ( 5%)
+#     string-pass       0 retains ->  0    nothing to remove
+#
+# The cause is structural: pass 3 is intra-block and every nullable heap field
+# read ends its block at the null test, so on linked structures the pass is
+# looking at a program chopped into pieces smaller than the pairs it is trying
+# to match.
+#
+# THIS IS THE ACCEPTANCE CRITERION for the null-test extension. A fix that
+# works moves `json`'s survivors substantially below 18. A fix that moves
+# nothing means the hypothesis was wrong, which is worth knowing before
+# general cross-block dataflow gets built on top of it.
+#
+# 2026-08-27, ADR-0066 (transparent callees + frontier pairs + null ARC ops):
+#
+#     hashmap          35 retains -> 13    (lookup path fully retain-free)
+#     json             19 retains ->  4
+#     tree-traversal    6 retains ->  0
+#     whole tree      133 retains -> 42
+#
+# What survives is attributed in GAP-0066 (releaseLimited) and GAP-0067
+# (mutating callees, loops) -- not unmeasured.
+#
+# 2026-08-27, ADR-0068 (loop-tolerant rule F + run-atomic release matching):
+#
+#     json             19 retains ->  3    (parseArray's tail-append pair)
+#     m3-generic-class  2 retains ->  0
+#     m3-elide-alias    7 retains ->  2    (aliasBug/aliasBugNullable unchanged)
+#     whole tree      146 -> 43           (146 pre includes concurrent targets)
+#
+# hashmap unchanged on purpose: all 13 survivors are GAP-0067 item 1
+# (mutating callees, escalation 0011's question). NEON's loaderNextBatch
+# and epochReduce (not in this tree's list) both went retain-free.
+#
+# 2026-08-27, ADR-0072 (derived return-value freshness, escalation 0011
+# Option C — owner-decided):
+#
+#     m2-loopheap       2 retains ->  0    (lastKept: ADR-0063's third named
+#                                           lost pair, spared across the
+#                                           foreign release, freshSpared=1)
+#     fresh-return      4 retains ->  2    (new pinned fixture: freshShape
+#                                           recovered, nonFreshShape refused)
+#     whole tree      194 -> 56           (194 pre includes concurrent
+#                                           targets; was -> 57)
+#
+# Everything else BYTE-IDENTICAL on purpose, and the unchanged rows are the
+# honest half of the result: json's remaining 3 are loop-carried pairs
+# (GAP-0067 item 2's leftover shape — the summary proves parseValue & co.
+# returns-fresh, the loop shape is what stands); hashmap's 13 are mutating-
+# callee descents, store-retains with no matching release, and cluster-
+# escaping mapInsert values (per-site table in ADR-0072); m3-elide-alias's
+# aliasBug/aliasBugNullable stay refused because a Load is never fresh.
+#
+# It is NOT sufficient on its own. Seeing the pairs and removing them is one
+# thing; that removal paying for itself is another. Pair this with
+# `closure-heavy`'s ratio, which is the allocator-honest benchmark closest to
+# the bar and almost entirely `cur = cur.next` alias traffic.
+
+set -uo pipefail
+CORE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$CORE_DIR" || exit 2
+
+command -v dart >/dev/null 2>&1 || { echo "elision-delta: no dart on PATH" >&2; exit 2; }
+
+targets=()
+if [ "$#" -gt 0 ]; then
+  targets=("$@")
+else
+  for f in bench/benchmarks/*/bench.dart examples/*/*.dart; do
+    [ -f "$f" ] || continue
+    targets+=("$f")
+  done
+fi
+
+total_pre=0
+total_post=0
+printf "%-34s %8s %8s %8s   %s\n" "source" "pre" "post" "removed" "share"
+printf "%-34s %8s %8s %8s   %s\n" "----------------------------------" "--------" "--------" "--------" "-----"
+
+for f in "${targets[@]}"; do
+  pre_line="$(dart dc-objdump/bin/dc_objdump.dart --arc --no-elide "$f" 2>/dev/null | grep '^  TOTAL:')"
+  post_line="$(dart dc-objdump/bin/dc_objdump.dart --arc "$f" 2>/dev/null | grep '^  TOTAL:')"
+  # A file that does not lower (an example needing a sibling .c, say) is
+  # SKIPPED LOUDLY rather than counted as zero -- a silent zero would look
+  # like a program with no ARC traffic, which is a real and different thing.
+  if [ -z "$pre_line" ] || [ -z "$post_line" ]; then
+    printf "%-34s %8s %8s %8s   (did not lower)\n" "$(basename "$(dirname "$f")")/$(basename "$f")" "-" "-" "-"
+    continue
+  fi
+  pre="$(echo "$pre_line" | sed -n 's/.*retain=\([0-9]*\).*/\1/p')"
+  post="$(echo "$post_line" | sed -n 's/.*retain=\([0-9]*\).*/\1/p')"
+  [ -n "$pre" ] || pre=0
+  [ -n "$post" ] || post=0
+  removed=$((pre - post))
+  if [ "$pre" -gt 0 ]; then
+    share="$(awk -v r="$removed" -v p="$pre" 'BEGIN{printf "%.0f%%", 100*r/p}')"
+  else
+    share="n/a"
+  fi
+  printf "%-34s %8s %8s %8s   %s\n" \
+    "$(basename "$(dirname "$f")")/$(basename "$f")" "$pre" "$post" "$removed" "$share"
+  total_pre=$((total_pre + pre))
+  total_post=$((total_post + post))
+done
+
+echo
+total_removed=$((total_pre - total_post))
+if [ "$total_pre" -gt 0 ]; then
+  echo "TOTAL retains: $total_pre lowered, $total_post survive, $total_removed removed ($(awk -v r="$total_removed" -v p="$total_pre" 'BEGIN{printf "%.1f%%", 100*r/p}'))"
+else
+  echo "TOTAL retains: 0 lowered — nothing measured. Check the target list rather than concluding elision is perfect."
+fi
