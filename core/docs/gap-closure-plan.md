@@ -94,3 +94,6 @@ is not completion when the requirement is to implement that feature.
 - v0.1.3 evidence remains in language-audit-2026-09-13.md. It resolves specific
   defects, not this entire checklist. The published version remains v0.1.3 until
   the next release is independently built, tested and synchronized.
+
+- Header dependency emission (GAP-0022): four failing regressions now pass;
+  valid generated headers compile as C11/C++17. Cross-platform CI pending.

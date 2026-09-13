@@ -125,13 +125,15 @@ require_header_line 'uint32_t ffiWidenU8ToU32(uint8_t a0, uint32_t a1);' \
 # (c) The by-value struct. The typedef itself, both of its fields in order,
 # and a function actually returning it -- a header with the typedef but a
 # uint64_t-returning ffiCheckPositive would compile and be silently wrong.
-require_header_line 'typedef struct {' \
+require_header_line 'typedef struct Result Result;' \
+  "the forward declaration for Result"
+require_header_line 'struct Result {' \
   "the struct typedef opening for the by-value Result type (ADR-0014)"
 require_header_line '  uint64_t tag;' \
   "the Result struct's 'tag' field"
 require_header_line '  uint64_t payload;' \
   "the Result struct's 'payload' field"
-require_header_line '} DCDART_PACKED Result;' \
+require_header_line '} DCDART_PACKED;' \
   "the Result struct typedef name/packing"
 require_header_line 'Result ffiCheckPositive(uint64_t a0);' \
   "the by-value struct-returning prototype for ffiCheckPositive"

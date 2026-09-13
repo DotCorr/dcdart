@@ -1493,6 +1493,14 @@ structs pointing at each other) becomes a real case needing a forward declaratio
 
 **Cost of the workaround:** none today.
 
+
+**2026-09-14 implementation update:** header discovery now traverses callbacks,
+raw-pointer pointees and nested fields. Named forward declarations support pointer
+recursion, by-value dependencies are topologically ordered, and conflicting names
+or recursive by-value layouts fail explicitly. Opaque ARC handles precede structs
+that use them. New regressions compile the emitted headers as C11 and C++17.
+This source change is not yet in published v0.1.3.
+
 ---
 
 ## GAP-0021 — A fresh clone of this repo could not build at all; the ignored vendor tree was not reproducible without undocumented manual steps

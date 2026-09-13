@@ -65,11 +65,8 @@ String emitCHeader(DCModule module, {required String headerName}) {
   // value (spec §6 / ADR-0011's @packed layout, ADR-0014's Result), and C
   // requires a complete type before it is used that way.
   final structs = _collectStructs(module);
-  if (structs.isNotEmpty) {
-    for (final struct in structs) {
-      buffer.write(_emitStruct(struct));
-      buffer.writeln();
-    }
+  for (final struct in structs) {
+    buffer.writeln('typedef struct ${struct.name} ${struct.name};');
   }
 
   // An opaque handle for heap objects. C must never dereference one: the
@@ -88,6 +85,11 @@ String emitCHeader(DCModule module, {required String headerName}) {
   if (_usesWeakPointer(module)) {
     buffer.writeln('/* Opaque handle to a DCDart weak reference (ADR-0023). */');
     buffer.writeln('typedef void *DCWeakRef;');
+    buffer.writeln();
+  }
+
+  for (final struct in structs) {
+    buffer.write(_emitStruct(struct));
     buffer.writeln();
   }
 
@@ -141,11 +143,11 @@ String _emitStruct(DCStruct struct) {
   buffer.writeln('#else');
   buffer.writeln('#  define DCDART_PACKED __attribute__((packed))');
   buffer.writeln('#endif');
-  buffer.writeln('typedef struct {');
+  buffer.writeln('struct ${struct.name} {');
   for (final field in struct.fields) {
     buffer.writeln('  ${cDeclaratorOf(field.type, field.name, context: struct.name)};');
   }
-  buffer.writeln('} DCDART_PACKED ${struct.name};');
+  buffer.writeln('} DCDART_PACKED;');
   buffer.writeln('#if defined(_MSC_VER)');
   buffer.writeln('#  pragma pack(pop)');
   buffer.writeln('#endif');
@@ -258,18 +260,55 @@ String cTypeOf(DCType type, {required String context}) {
 /// ahead of a real case. It is recorded in known-gaps.md GAP-0022 rather
 /// than left as a silent trap.
 List<DCStruct> _collectStructs(DCModule module) {
-  final seen = <String>{};
-  final result = <DCStruct>[];
-  void visit(DCType type) {
-    if (type is DCStruct && seen.add(type.name)) {
-      result.add(type);
+  final definitions = <String, DCStruct>{};
+  final seen = Set<DCType>.identity();
+  String spelling(DCType type) => switch (type) {
+    DCStruct() => 'struct:${type.name}',
+    DCPointer() => 'ptr:${spelling(type.pointee)}',
+    DCHeapPointer() => 'heap',
+    DCWeakPointer() => 'weak',
+    DCFuncPtr() => 'fn:${spelling(type.returnType)}(${type.params.map((p) => '${p.owned}:${spelling(p.type)}').join(',')})',
+    _ => type.toString(),
+  };
+  String shape(DCStruct type) => type.fields
+      .map((field) => '${field.name}:${spelling(field.type)}').join(';');
+  void discover(DCType type) {
+    if (!seen.add(type)) return;
+    if (type is DCStruct) {
+      final previous = definitions[type.name];
+      if (previous != null && shape(previous) != shape(type)) {
+        throw CHeaderError('conflicting C struct definitions for ${type.name}');
+      }
+      definitions[type.name] = type;
+      for (final field in type.fields) { discover(field.type); }
+    } else if (type is DCPointer) {
+      discover(type.pointee);
+    } else if (type is DCFuncPtr) {
+      discover(type.returnType);
+      for (final param in type.params) { discover(param.type); }
     }
   }
-
   for (final function in module.functions) {
-    visit(function.returnType);
-    function.paramTypes.forEach(visit);
+    discover(function.returnType);
+    function.paramTypes.forEach(discover);
   }
+  final result = <DCStruct>[];
+  final visiting = <String>{};
+  final complete = <String>{};
+  void order(DCStruct type) {
+    if (complete.contains(type.name)) return;
+    if (!visiting.add(type.name)) {
+      throw CHeaderError('recursive by-value C struct layout: ${type.name}');
+    }
+    for (final field in type.fields) {
+      final dependency = field.type;
+      if (dependency is DCStruct) order(dependency);
+    }
+    visiting.remove(type.name);
+    complete.add(type.name);
+    result.add(type);
+  }
+  for (final type in definitions.values) { order(type); }
   return result;
 }
 
@@ -289,14 +328,17 @@ bool _usesWeakPointer(DCModule module) =>
 /// is a pre-existing shallow check with its own (unrelated) reason to be:
 /// `cTypeOf` spells a pointee inline rather than by typedef name.
 bool _anySignatureType(DCModule module, bool Function(DCType) test) {
+  final seen = Set<DCType>.identity();
   bool visit(DCType type) {
+    if (!seen.add(type)) return false;
     if (test(type)) return true;
     if (type is DCFuncPtr) {
       return visit(type.returnType) || type.params.any((p) => visit(p.type));
     }
+    if (type is DCPointer) return visit(type.pointee);
+    if (type is DCStruct) return type.fields.any((f) => visit(f.type));
     return false;
   }
-
   return module.functions
       .any((f) => visit(f.returnType) || f.paramTypes.any(visit));
 }
