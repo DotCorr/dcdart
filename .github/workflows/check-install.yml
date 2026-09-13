@@ -29,7 +29,7 @@ jobs:
             eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           fi
           brew tap dotcorr/tap
-          brew trust --formula dotcorr/tap/dcdart
+          brew trust --debug --formula dotcorr/tap/dcdart
           brew install --build-bottle dcdart
           python3 site/tools/check-install.py "$(brew --prefix dcdart)/libexec"
           if [ "$RUNNER_OS" = macOS ]; then
