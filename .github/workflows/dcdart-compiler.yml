@@ -1,0 +1,27 @@
+name: Deploy playground compiler
+on:
+  push:
+    branches: [codex/dcdart-web-playground]
+    paths: ['site/compiler/**', '.github/workflows/dcdart-compiler.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: dcdart-compiler-deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --prefix site && npm ci --prefix site/compiler
+      - run: bash core/scripts/vendor-frontend.sh && node site/compiler/prepare.mjs
+      - name: Deploy compiler and isolated container
+        working-directory: site/compiler
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.DCDART_DEPLOY_TOKEN }}
+        run: ../node_modules/.bin/wrangler deploy
