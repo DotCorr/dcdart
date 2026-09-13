@@ -1,6 +1,6 @@
 # ADR-0082 — Separate heap runtime object
 
-Status: backend implemented and locally tested; CLI integration pending.
+Status: implemented in development; source tests pass locally, platform validation pending.
 Date: 2026-09-14.
 
 The backend can emit allocation clients with external heap state, and emit that
@@ -21,5 +21,22 @@ The backend regression compiles two independent allocation/free objects at O2,
 links one runtime, and executes 2,000 cross-object allocation/free cycles with
 simultaneous pointer distinctness, byte preservation and zero live allocations.
 It also links an incompatible region size and requires a layout-symbol failure.
-Local macOS ARM64 passed; cross-platform checks and the user-facing build option
-are still required before GAP-0064 can be closed.
+Local macOS ARM64 passed. The source conformance case uses the actual build
+command, and the packaged compiler runs it on every release host.
+
+Build one client with `--emit-heap-runtime runtime.o`, and every other client
+with `--external-heap-runtime`. Link all clients with exactly one runtime.o:
+
+```sh
+dcc build --mode bare --target host a.dart -o a.o --emit-heap-runtime runtime.o
+dcc build --mode bare --target host b.dart -o b.o --external-heap-runtime
+clang main.c a.o b.o runtime.o -o app
+```
+
+Match target and heap-region size across clients. Do not mix embedded-runtime
+objects with this mode or link multiple runtime objects. Separate clients have
+intentional unresolved runtime references: freestanding symbol verification
+applies to the combined linked artifact. Extern manifests do not authorize these
+reserved names individually. The runtime output must differ from source, object
+and header paths. These flags are unreleased development features until the next
+validated release.

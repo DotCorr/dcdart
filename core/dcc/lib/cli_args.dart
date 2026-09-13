@@ -63,6 +63,9 @@ class BuildOptions {
   /// recursing 65,537 frames deep, testing the C stack as much as the heap.
   final int? heapRegionBytes;
 
+  final bool externalHeapRuntime;
+  final String? heapRuntimePath;
+
   /// Which file is THE PRELUDE, or null to use the one beside this `dcc`
   /// (`Platform.script.resolve('../../runtime/dc-core-bare/prelude.dart')`).
   ///
@@ -99,6 +102,8 @@ class BuildOptions {
     this.target = DCTarget.defaultTarget,
     this.headerPath,
     this.heapRegionBytes,
+    this.externalHeapRuntime = false,
+    this.heapRuntimePath,
     this.preludePath,
     this.allowFp = false,
   });
@@ -158,6 +163,9 @@ Options for build:
                            different spelling has no @bare functions as far as
                            dcc is concerned. Use this when your source lives
                            outside the DCDart repo.
+  --external-heap-runtime  Reference a separately linked shared heap runtime.
+  --emit-heap-runtime <o>  Also emit that runtime object; implies external mode.
+                          Link exactly one runtime with all allocation clients.
   --heap-region-bytes <n>  Bytes per size-class heap region (ADR-0058).
                            Power of two, >= 4096. Total heap is 8x this.
                            Default: 2 MiB per class hosted (16 MiB total),
@@ -217,6 +225,8 @@ BuildOptions _parseBuildArgs(
   DCTarget? target;
   String? headerPath;
   int? heapRegionBytes;
+  var externalHeapRuntime = false;
+  String? heapRuntimePath;
   String? preludePath;
   var allowFp = false;
 
@@ -228,6 +238,20 @@ BuildOptions _parseBuildArgs(
       throw const CliHelpRequested();
     }
 
+    if (arg == '--external-heap-runtime') {
+      externalHeapRuntime = true;
+      i++;
+      continue;
+    }
+    if (arg == '--emit-heap-runtime') {
+      if (i + 1 >= args.length || args[i + 1].startsWith('-')) {
+        throw const CliUsageError('dcc build: --emit-heap-runtime requires an object path');
+      }
+      heapRuntimePath = args[i + 1];
+      externalHeapRuntime = true;
+      i += 2;
+      continue;
+    }
     if (arg == '--mode') {
       if (i + 1 >= args.length) {
         throw const CliUsageError(
@@ -370,6 +394,8 @@ BuildOptions _parseBuildArgs(
     target: target ?? DCTarget.defaultTarget,
     headerPath: headerPath,
     heapRegionBytes: heapRegionBytes,
+    externalHeapRuntime: externalHeapRuntime,
+    heapRuntimePath: heapRuntimePath,
     preludePath: preludePath,
     allowFp: allowFp,
   );

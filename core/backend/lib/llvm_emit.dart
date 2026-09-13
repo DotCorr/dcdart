@@ -1549,7 +1549,9 @@ int _atomicWidthBytes(
 /// module, only when something in it actually allocates.
 /// Standalone heap state shared by separately compiled allocation clients.
 /// Match region size and target to every client. Link exactly one such object.
-String emitHeapRuntime({required String targetTriple, required int regionBytes}) {
+String emitHeapRuntime({required String targetTriple, int? regionBytes,
+    bool freestanding = false}) {
+  regionBytes ??= freestanding ? _defaultFreestandingHeapRegionBytes : _defaultHeapRegionBytes;
   if (regionBytes < _minSizeClassBytes ||
       regionBytes & (regionBytes - 1) != 0) {
     throw BackendError('heap runtime region size must be a power of two >= $_minSizeClassBytes');

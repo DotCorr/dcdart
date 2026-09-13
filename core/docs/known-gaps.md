@@ -2945,20 +2945,16 @@ sized ints exist.
 
 ## GAP-0064 — only one DCDart object per link may allocate
 
-The backend emits the heap's symbols (`dc_heap_live`, the region, the free lists) as external
-definitions into every object whose code calls `Heap.allocate` or constructs a heap object.
-Because dcc compiles one library per object (GAP-0028), two DCDart objects that both allocate
-cannot be linked into the same binary: the heap symbols collide, and even if they were weakened
-the two objects would each believe they own the region. First hit by NEON's N0 kernels
-(2026-08-27), which were forced into a three-file split with a single designated allocating
-object (`neon/native/alloc.dart`) exposing alloc/free wrappers to the rest.
+**Status:** IMPLEMENTED IN DEVELOPMENT — platform verification pending.
 
-Cost of the workaround: every multi-object program must nominate one heap-owner object and
-route all allocation through it by hand; nothing enforces the convention, and a second
-allocating object fails only at link time with raw duplicate-symbol errors that don't name the
-rule. Fix direction when multi-object programs become common: emit heap symbols in a separate
-runtime object linked exactly once, or mark them appropriately for the linker and make the
-region genuinely shared.
+ADR-0082 adds separate heap runtime emission. Build one client with
+`--emit-heap-runtime runtime.o`, the others with `--external-heap-runtime`, then
+link all clients with exactly one runtime object. Default single-object builds
+still embed their own state. Clients share the arena, free lists and live count;
+cross-object allocation/free is exercised for 2,000 cycles. A layout-specific
+relocation makes incompatible region sizes fail at link time. The native source
+regression runs with each packaged compiler, including Windows. Allocator thread
+safety remains a separate concurrency requirement.
 
 ## GAP-0068 — dcc never emits fused multiply-add; C compiled with the harness flags does by default
 

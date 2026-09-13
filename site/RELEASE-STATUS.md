@@ -27,3 +27,11 @@ Homebrew core, WinGet, AUR, npm, pub.dev, crates.io and PyPI are not claimed dis
 Signed fixed-width integers, guarded signed division, and narrow-integer C ABI
 fixes are being validated in source. They are not yet in the published packages
 or hosted playground. The complete scope remains in `core/docs/gap-closure-plan.md`.
+
+## Unreleased development: multiple allocating objects
+
+The development branch supports `--emit-heap-runtime runtime.o` and
+`--external-heap-runtime` for linking multiple allocating objects against one
+shared runtime. These options are not in the current v0.1.3 public packages or
+playground. Update public CLI documentation when the tested next release is
+published; keep the existing versioned installation instructions until then.

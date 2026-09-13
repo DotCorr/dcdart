@@ -72,8 +72,18 @@ Future<void> runBuild(BuildOptions options) async {
     // the same way `noRedZone` is.
     freestanding: target.isFreestanding,
     heapRegionBytes: options.heapRegionBytes,
+    externalHeapRuntime: options.externalHeapRuntime,
   );
 
+  final runtimePath = options.heapRuntimePath;
+  if (runtimePath != null) {
+    final runtimeUri = File(runtimePath).absolute.uri.normalizePath();
+    for (final path in [options.inputPath, options.outputPath, options.headerPath]) {
+      if (path != null && File(path).absolute.uri.normalizePath() == runtimeUri) {
+        throw ArgumentError('heap runtime output must differ from source, object and header paths');
+      }
+    }
+  }
   final tempDir = Directory.systemTemp.createTempSync('dcc_backend_');
   try {
     final llFile = File('${tempDir.path}/out.ll')..writeAsStringSync(llText);
@@ -89,6 +99,14 @@ Future<void> runBuild(BuildOptions options) async {
       // FPU-state obligation that comes with it. See compile.dart.
       noFpRegs: target.isFreestanding && !options.allowFp,
     );
+    if (runtimePath != null) {
+      final runtimeFile = File('${tempDir.path}/runtime.ll')..writeAsStringSync(
+        emitHeapRuntime(targetTriple: target.triple,
+          regionBytes: options.heapRegionBytes, freestanding: target.isFreestanding));
+      await compileToObject(runtimeFile.path, runtimePath,
+        targetTriple: target.triple, noRedZone: target.forbidsRedZone,
+        noFpRegs: target.isFreestanding && !options.allowFp);
+    }
   } finally {
     tempDir.deleteSync(recursive: true);
   }

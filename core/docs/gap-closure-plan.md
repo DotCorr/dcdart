@@ -111,3 +111,6 @@ is not completion when the requirement is to implement that feature.
 - Shared heap runtime (GAP-0064): backend split emission passes a local
   two-object allocation/free regression and rejects mismatched layouts at link
   time. CLI integration and platform verification remain pending (ADR-0082).
+
+- Shared heap CLI integration: source and packaged-compiler regressions added.
+  Local source tests pass; full platform evidence remains pending.
