@@ -1,7 +1,12 @@
 FROM dart:3.12.2 AS dart-sdk
 FROM docker.io/cloudflare/sandbox:0.12.9
 USER root
-RUN apt-get update && apt-get install -y --no-install-recommends clang lld python3 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl python3 \
+    && curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o /usr/share/keyrings/llvm.asc \
+    && echo "deb [signed-by=/usr/share/keyrings/llvm.asc] https://apt.llvm.org/jammy/ llvm-toolchain-jammy-21 main" > /etc/apt/sources.list.d/llvm.list \
+    && apt-get update && apt-get install -y --no-install-recommends clang-21 lld-21 \
+    && rm -rf /var/lib/apt/lists/*
+ENV DCDART_CLANG=/usr/bin/clang-21 DCDART_WASM_LD=/usr/bin/wasm-ld-21
 COPY --from=dart-sdk /usr/lib/dart /usr/lib/dart
 ENV PATH="/usr/lib/dart/bin:${PATH}" DCDART_DART="/usr/lib/dart/bin/dart"
 COPY toolchain-src/ /opt/dcdart/
