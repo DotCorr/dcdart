@@ -89,6 +89,8 @@ is not completion when the requirement is to implement that feature.
 
 - [ ] GAP-0079 — oversized integer shifts produced LLVM poison
 
+- [ ] GAP-0080 — pointer/callback reassignment and control-flow merges
+
 ## Current iteration
 
 - Signed i8/i16/i32/i64 values and checked division (GAP-0026/GAP-0024):
@@ -128,3 +130,6 @@ is not completion when the requirement is to implement that feature.
 
 - Shift boundaries (GAP-0079): reproduced invalid large-count results;
   defined zero/sign fill and negative-count traps now pass locally.
+
+- Pointer control flow (GAP-0080): walking cursors and alternating callbacks
+  pass locally; callback ownership changes remain rejected.

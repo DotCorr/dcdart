@@ -1461,10 +1461,10 @@ class _BareFunctionLowerer {
         // with no ownership questions, so reassignment is the same
         // rebinding it has always been for ints — `acc = acc + x` in an ML
         // kernel's accumulation loop is this exact shape.
-        if (oldValue.type is! DCInt && oldValue.type is! DCFloat && oldValue.type is! DCBool) {
+        if (!_isUnmanagedScalar(oldValue.type)) {
           throw DccLowerError(
             '"$context": reassigning "${variable.name}" (type ${oldValue.type}) '
-            'is not supported -- only scalar (u8/u32/u64/f32/f64) locals can '
+            'is not supported -- only unmanaged scalar locals can '
             'be reassigned; heap- and weak-typed reassignment needs a real '
             'ownership policy this project has not designed yet, see '
             'docs/known-gaps.md',
@@ -1807,7 +1807,7 @@ class _BareFunctionLowerer {
       final mergeType = valuesBeforeIf[v]!.type;
       // DCFloat allowed alongside DCInt (ADR-0065): same scalar-merge
       // mechanics, the block param just carries a float type.
-      if (mergeType is! DCInt && mergeType is! DCFloat && mergeType is! DCBool) {
+      if (!_isUnmanagedScalar(mergeType)) {
         throw DccLowerError(
           '"$context": "${v.name}" (type $mergeType) is reassigned in a '
           'branch of this if/else that falls through -- only scalar '
@@ -2046,13 +2046,11 @@ class _BareFunctionLowerer {
       // DCFloat allowed alongside DCInt (ADR-0065): a float accumulator
       // (`sum = sum + a[i] * b[i]`) is the defining loop-carried value of
       // every ML kernel this feature exists for.
-      if (current.type is! DCInt &&
-          current.type is! DCFloat &&
-          current.type is! DCBool &&
+      if (!_isUnmanagedScalar(current.type) &&
           current.type is! DCHeapPointer) {
         throw DccLowerError(
           '"$context": loop-carried variable "${v.name}" has type '
-          '${current.type} — only scalar (u8/u32/u64/f32/f64) and heap-typed '
+          '${current.type} — only unmanaged scalar and heap-typed '
           'locals can be reassigned inside a loop body',
         );
       }
@@ -5000,6 +4998,11 @@ class _BareFunctionLowerer {
     return heapLayouts.register(_ClassInstance(cls, resolved));
   }
 }
+
+// Plain SSA values have no retain/release obligations on reassignment.
+// Function-pointer ownership is part of its type, checked at each assignment.
+bool _isUnmanagedScalar(DCType type) => type is DCInt || type is DCFloat ||
+    type is DCBool || type is DCPointer || type is DCFuncPtr;
 
 DCType _lowerSignatureType(
   DartType type, {

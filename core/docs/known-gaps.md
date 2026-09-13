@@ -3138,3 +3138,12 @@ unvalidated counts reached LLVM shift instructions, whose oversized-count result
 is poison. A source boundary regression failed before the fix and now passes
 for all integer widths. The packaged-compiler regression checks runtime results
 and negative-count traps on each release host.
+
+
+## GAP-0080 — pointer and callback variables could not advance through control flow
+
+**Status:** IMPLEMENTED IN DEVELOPMENT — platform verification pending.
+
+ADR-0086 removes scalar whitelist refusals for raw/function pointers in assignment,
+loops and branch merges. Pointer walking and alternating callbacks now execute;
+exact callback ownership type checks remain enforced by a negative regression.
