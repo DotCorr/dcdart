@@ -8,9 +8,9 @@
       name="description"
       content="Dart syntax. Native code. A systems language with ARC memory management and a plain C ABI. Install DCDart or run real compiled WebAssembly in your browser."
     />
-    <meta name="theme-color" content="#f4f3ef" />
+    <meta name="theme-color" content="#141412" />
     <link rel="canonical" href="https://dcdart.dotcorr.com/" />
-    <link rel="icon" href="dotcorr-isometric-black.svg" />
+    <link rel="icon" href="dotcorr-isometric-white.svg" />
     <link rel="stylesheet" href="styles.css" />
     <script src="site.js" type="module"></script>
   </head>
@@ -18,9 +18,9 @@
     <a class="skip" href="#main">Skip to content</a>
     <header class="site-header">
       <a class="logo" href="/"
-        ><img class="logo-mark" src="dotcorr-isometric-black.svg" alt="" /><span
+        ><img class="logo-mark" src="dotcorr-isometric-white.svg" alt="" /><span
           class="logo-word"
-          >DotCorr<strong>DCDart</strong></span
+          >DCDart</span
         ></a
       >
       <nav aria-label="Main navigation">
@@ -31,120 +31,19 @@
     </header>
     <main id="main" class="shell">
       <section class="hero">
-        <div class="hero-top">
-          <span class="eyebrow"
-            ><i class="signal"></i>A language for the machine</span
-          ><a
-            class="release-link"
-            href="https://github.com/DotCorr/dcdart/releases/tag/v0.1.0"
-            >v0.1.0 / Early release ↗</a
-          >
-        </div>
-        <div class="hero-grid">
-          <div>
-            <h1>
-              Dart syntax.<br />Native by nature.<br /><span
-                >Yours to build.</span
-              >
-            </h1>
-            <p class="lead">
-              The familiarity of Dart. The control of a systems language.
-              Ahead-of-time compilation, automatic reference counting, and a
-              direct line to C.
-            </p>
-            <div class="cta-row">
-              <a class="btn primary" href="playground.html"
-                >Run DCDart <span>↗</span></a
-              ><a class="btn" href="#install"
-                >Get the compiler <span>↓</span></a
-              >
-            </div>
-          </div>
-          <div
-            class="device"
-            aria-label="DCDart compiler: source to native code"
-          >
-            <div class="device-top">
-              <span>DC / LANGUAGE SYSTEM</span
-              ><span><i class="signal"></i> 001</span>
-            </div>
-            <img class="device-word" src="dcdart-dots.svg" alt="DCDart" />
-            <div class="device-window">
-              <pre><span class="kw">@bare</span>
-u64 add(u64 a, u64 b) {
-  <span class="kw">return</span> a + b;
-}</pre>
-            </div>
-            <div class="device-flow">
-              <span>SOURCE.dart</span><b>→</b><span>LLVM</span><b>→</b
-              ><span>NATIVE.o</span>
-            </div>
-            <div class="device-bottom">
-              <span>NO VM · NO JIT · NO TRACING GC</span
-              ><span>DESIGNED BY DOTCORR</span>
-            </div>
-          </div>
+        <h1>Dart, compiled for the systems<br />you want to build.</h1>
+        <p class="lead">
+          Native code. Automatic memory management. A direct line to C.
+        </p>
+        <div class="cta-row">
+          <a class="btn primary" href="#install">Get DCDart ↓</a
+          ><a class="btn" href="playground.html">Open playground →</a>
         </div>
       </section>
-      <div class="spec-strip">
-        <div><small>01 / COMPILE</small><strong>Ahead of time</strong></div>
-        <div>
-          <small>02 / MEMORY</small><strong>ARC + static elision</strong>
-        </div>
-        <div><small>03 / INTERFACE</small><strong>Plain C ABI</strong></div>
-        <div>
-          <small>04 / CHARACTER</small><strong>Unapologetically native</strong>
-        </div>
-      </div>
-      <section class="section">
-        <div class="section-head">
-          <div>
-            <span class="eyebrow">[01] / The language</span>
-            <h2>Familiar on the surface.<br />Precise underneath.</h2>
-          </div>
-          <p>
-            A working subset of Dart, built for systems code. Explicit where it
-            matters. Readable where it counts.
-          </p>
-        </div>
-        <div class="features">
-          <article class="feature">
-            <span class="num">(01)</span>
-            <h3>Memory, without the mystery.</h3>
-            <p>
-              The compiler inserts reference counting and removes redundant
-              operations. Objects stay put, so C can work with stable pointers.
-            </p>
-          </article>
-          <article class="feature">
-            <span class="num">(02)</span>
-            <h3>Every bit has a purpose.</h3>
-            <p>
-              Fixed-width integers. Explicit conversions. Arithmetic that traps
-              on overflow by default. Control that survives compilation.
-            </p>
-          </article>
-          <article class="feature">
-            <span class="num">(03)</span>
-            <h3>Bring your own world.</h3>
-            <p>
-              Compile to object files and link with C. Freestanding code can
-              live in firmware, kernels, or the native library you are building
-              next.
-            </p>
-          </article>
-        </div>
-      </section>
-      <section class="section">
-        <div class="section-head">
-          <div>
-            <span class="eyebrow">[02] / Try it here</span>
-            <h2>Real code. Your input.</h2>
-          </div>
-          <p>
-            This function was compiled by DCDart to WebAssembly. Change the
-            number and run it on your own machine, right here.
-          </p>
+      <section class="demo-stage">
+        <div class="demo-caption">
+          <span>DCDart Playground</span
+          ><span>Runs locally in your browser</span>
         </div>
         <div class="run-preview">
           <div class="preview-code">
@@ -182,11 +81,10 @@ u64 sumTo(u64 n) {
               >—</output
             >
             <p id="quick-status" class="mini-status" role="status">
-              Ready when you are. Executed locally with WebAssembly.
+              Ready to run · WebAssembly
             </p>
             <p class="mini-status">
-              Source is compiled ahead of time.<br />Every result is computed
-              from your input.
+              Precompiled source. Change the input to compute a new result.
             </p>
           </form>
         </div>
@@ -201,10 +99,46 @@ u64 sumTo(u64 n) {
           </p></noscript
         >
       </section>
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">The language</span>
+            <h2>A familiar language.<br />Built for native software.</h2>
+          </div>
+          <p>
+            A working subset of Dart, built for systems code. Explicit where it
+            matters. Readable where it counts.
+          </p>
+        </div>
+        <div class="features">
+          <article class="feature">
+            <h3>Memory, without the mystery.</h3>
+            <p>
+              The compiler inserts reference counting and removes redundant
+              operations. Objects stay put, so C can work with stable pointers.
+            </p>
+          </article>
+          <article class="feature">
+            <h3>Every bit has a purpose.</h3>
+            <p>
+              Fixed-width integers. Explicit conversions. Arithmetic that traps
+              on overflow by default. Control that survives compilation.
+            </p>
+          </article>
+          <article class="feature">
+            <h3>Bring your own world.</h3>
+            <p>
+              Compile to object files and link with C. Freestanding code can
+              live in firmware, kernels, or the native library you are building
+              next.
+            </p>
+          </article>
+        </div>
+      </section>
       <section class="section" id="install">
         <div class="install-grid">
           <div>
-            <span class="eyebrow">[03] / Get started</span>
+            <span class="eyebrow">Get started</span>
             <h2>A small start.<br />A native binary.</h2>
             <p>
               v0.1.0 is available for macOS on Apple Silicon through the DotCorr
@@ -245,7 +179,7 @@ brew install dotcorr/tap/dcdart</pre>
       <section class="section">
         <div class="section-head">
           <div>
-            <span class="eyebrow">[04] / Out in the open</span>
+            <span class="eyebrow">Out in the open</span>
             <h2>Early. Working. Evolving.</h2>
           </div>
           <p>

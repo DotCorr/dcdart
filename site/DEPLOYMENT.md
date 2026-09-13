@@ -5,11 +5,12 @@
 - Cloudflare Pages project: `dcdart`, production branch `main`, direct upload through Wrangler.
 - Authoritative DNS: Cloudflare (`apollo.ns.cloudflare.com`, `elisabeth.ns.cloudflare.com`). The domain owner moved the zone from Hostnet; Cloudflare reports the zone active.
 - Custom domain attached to Pages. Cloudflare DNS has a proxied `CNAME dcdart → dcdart.pages.dev`, TTL Auto. Existing apex, wildcard, mail, and unrelated subdomain records were preserved.
-- HTTPS returns 200 with certificate verification enabled at Cloudflare's authoritative address. DNS verification is active; Pages certificate validation was still pending in the API at the latest check, although verified HTTPS already works.
-- DNS propagation caveat: the local recursive resolver still cached the old `216.239.34.21` address during validation. Public/authoritative DNS returned Cloudflare. Custom-domain tests therefore mapped only this hostname to its verified Cloudflare address, with normal TLS verification retained. No permanent local DNS override was installed.
+- Domain, DNS verification, and certificate validation are all active in the Cloudflare Pages API. HTTPS returns 200 with normal DNS and certificate verification enabled.
+- The local ISP resolver cached the former host after the nameserver migration. The Mac’s Wi-Fi DNS was switched from automatic ISP DNS to Cloudflare (`1.1.1.1`, `1.0.0.1`), and its local DNS cache was flushed. No hosts-file or per-host address override is used. To restore automatic Wi-Fi DNS later: `networksetup -setdnsservers Wi-Fi Empty`.
+- Landing page, playground, and documentation now use a restrained dark design based on the requested Cursor reference: compact typography, neutral surfaces, quiet navigation, and the functional playground as the main visual.
 
 The checked-in Wrangler configuration deploys only `public/`. Native artifacts and historical captured outputs are not substituted for real execution. No production backend or billable compute is used by the playground.
 
-Validation: 11 runtime test groups passed (including thousands of numerical and ARC assertions); all 7 Chromium browser checks passed locally and against https://dcdart.pages.dev. The same 7 checks passed on https://dcdart.dotcorr.com using the temporary DNS mapping described above, including mobile layout, runtime errors, timeouts, corrupted binaries and response headers. The request-header check was rerun after applying the same DNS mapping to Node's resolver.
+Validation: 11 runtime test groups passed (including thousands of numerical and ARC assertions). After the redesign, all 7 Chromium browser flows passed locally and on https://dcdart.dotcorr.com using ordinary DNS and TLS verification, with no test resolver override. Coverage includes changed inputs, ARC accounting, runtime traps, timeouts, corrupted binaries, mobile layout, response headers, and missing pages. The published site also opened successfully in the Codex in-app browser.
 
 For routine verification after DNS propagation: `PLAYGROUND_URL=https://dcdart.dotcorr.com npm run test:browser` from `site/`.
