@@ -1,6 +1,6 @@
 # ADR-0079 — External function addresses
 
-Status: implemented in development; cross-platform validation pending.
+Status: verified in development within the [recorded platform scope](../development-validation-2026-09-14.md); not released.
 Date: 2026-09-14.
 
 A registered `@extern external` function can be used as a function value,

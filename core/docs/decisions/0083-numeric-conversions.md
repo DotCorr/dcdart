@@ -1,6 +1,6 @@
 # ADR-0083 — Complete sized integer/float conversion matrix
 
-Status: implemented in development; platform verification pending.
+Status: verified in development within the [recorded platform scope](../development-validation-2026-09-14.md); not released.
 Date: 2026-09-14.
 
 Every signed and unsigned sized integer (8/16/32/64 bits) supports toF32 and

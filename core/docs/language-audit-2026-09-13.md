@@ -1,6 +1,6 @@
 # Language audit — 2026-09-13
 
-This is an inventory of the 65 recorded gap entries, plus defects reproduced during this audit. It is not a proof that every possible language defect has been found. Source features, safety defects, optimization opportunities, downstream migrations, and historical resolutions are tracked separately.
+This is an inventory of the original recorded gap entries and defects reproduced during this audit (70 entries currently in known-gaps.md). It is not a proof that every possible language defect has been found. Source features, safety defects, optimization opportunities, downstream migrations, and historical resolutions are tracked separately.
 
 ## Release fixes
 
@@ -18,9 +18,18 @@ For each open safety issue: preserve a failing source/C regression, implement th
 ## Remaining priorities
 
 1. Foreign heap-pointer validation, read-only pointer provenance, and borrowed text lifetimes remain safety work. Source nullable-access rejection is already enforced by the frontend; the previous contrary claim was disproved by a regression. Atomic alignment is guarded in v0.1.3 (ADR-0075).
-2. Multi-object runtime linking, signed integer types/division, pointer/Str C ABI support, generic methods and imported-library compilation. These require their own regression cases and compatibility decisions.
+2. Multi-object runtime linking, signed integer types/division and pointer/Str C ABI support are implemented and tested in development; see the validation checkpoint below. Generic methods, imported-library compilation, broader ownership and remaining compatibility requirements stay open.
 3. Error propagation cleanup now covers owned locals and pending expression arguments/receivers in v0.1.3 (GAP-0076). The new regression checks both paths and live-object counts.
 4. Benchmark and elision improvements follow correctness. OS MMIO migration belongs to the OS checkout and is not a compiler release fix.
+
+## Development progress (not released)
+
+[Verified checkpoint and platform scope](development-validation-2026-09-14.md):
+61 conformance suites passed without failures or skips on three native hosts;
+Windows passed its packaged-compiler regression subset. The checkpoint includes
+signed values, C interop, shared runtime and compare-exchange. Later shift,
+pointer-flow and unconditional-loop changes require their own recorded evidence.
+The public release remains v0.1.3. Implementation or CI success is not publication.
 
 ## Recorded-gap inventory
 
@@ -37,7 +46,7 @@ For each open safety issue: preserve a failing source/C regression, implement th
 | [GAP-0066](known-gaps.md) | Optimization work | pass 3 cannot tell two heap values apart, so it surrenders every pair spanning a release |
 | [GAP-0055](known-gaps.md) | Open or partial language/ABI feature | Generic METHODS on classes are not implemented |
 | [GAP-0056](known-gaps.md) | Open or partial language/ABI feature | A generic receiver's type arguments are recovered structurally, from a finite set of expression shapes |
-| [GAP-0026](known-gaps.md) | Open or partial language/ABI feature | No signed sized-integer types, so a C `int` parameter has to be declared `u32` |
+| [GAP-0026](known-gaps.md) | Implemented in development; see scoped validation | No signed sized-integer types, so a C `int` parameter has to be declared `u32` |
 | [GAP-0032](known-gaps.md) | Historical resolution / partial resolution | `dcc` never passes an optimization flag, so every DCDart program ships `-O0` code |
 | [GAP-0040](known-gaps.md) | Historical resolution / partial resolution | Generic CLASSES are not monomorphized, only generic functions |
 | [GAP-0039](known-gaps.md) | Historical resolution / partial resolution | Mutable statics have no concurrency story |
@@ -50,17 +59,17 @@ For each open safety issue: preserve a failing source/C regression, implement th
 | [GAP-0044](known-gaps.md) | Open or partial language/ABI feature | Fences exist; a memory-ordering MODEL does not, and atomics are seq_cst-only |
 | [GAP-0043](known-gaps.md) | Historical resolution / partial resolution | The fences are currently redundant with `volatile`, so their ordering property is untestable |
 | [GAP-0042](known-gaps.md) | Fixed in v0.1.3 / runtime regression | Atomic alignment is checked before every multi-byte atomic operation |
-| [GAP-0041](known-gaps.md) | Open or partial language/ABI feature | No compare-exchange, because DC-IR has no multi-result instruction |
+| [GAP-0041](known-gaps.md) | Implemented in development; see scoped validation | No compare-exchange, because DC-IR has no multi-result instruction |
 | [GAP-0031](known-gaps.md) | Historical resolution / partial resolution | `@rodata` emitted homogeneous ARRAYS only, so a type descriptor's STRUCT was inexpressible |
 | [GAP-0030](known-gaps.md) | Open safety issue | A `Store` into read-only static data is not prevented, and on the freestanding target it corrupts silently |
 | [GAP-0051](known-gaps.md) | Historical resolution / partial resolution | `Pointer<T>.elementAt(n)` does not exist, so every indexed read restates the element width by hand |
 | [GAP-0029](known-gaps.md) | Open safety issue | The extern manifest is trusted input; reserved runtime families are now unhonorable, but everything else is taken on faith |
 | [GAP-0028](known-gaps.md) | Open or partial language/ABI feature | `dcc` compiles ONE library per object file; `@bare` functions in imported libraries were silently dropped |
-| [GAP-0025](known-gaps.md) | Open or partial language/ABI feature | `Pointer<T>` cannot appear in a function signature, which most real C APIs need |
+| [GAP-0025](known-gaps.md) | Implemented in development; see scoped validation | `Pointer<T>` cannot appear in a function signature, which most real C APIs need |
 | [GAP-0027](known-gaps.md) | Open audit / tooling / representation work | The conformance suite structurally cannot catch bare-metal-only codegen defects |
-| [GAP-0024](known-gaps.md) | Open or partial language/ABI feature | Signed integer division is rejected, not implemented (needs an INT_MIN/-1 guard) |
+| [GAP-0024](known-gaps.md) | Implemented in development; see scoped validation | Signed integer division is rejected, not implemented (needs an INT_MIN/-1 guard) |
 | [GAP-0023](known-gaps.md) | Fixed / regression added | No general boolean NOT; `!` works only as part of `!=` |
-| [GAP-0022](known-gaps.md) | Open audit / tooling / representation work | Generated C headers emit structs in signature order, which is not guaranteed to be valid C |
+| [GAP-0022](known-gaps.md) | Implemented in development; see scoped validation | Generated C headers emit structs in signature order, which is not guaranteed to be valid C |
 | [GAP-0021](known-gaps.md) | Historical resolution / partial resolution | A fresh clone of this repo could not build at all; the ignored vendor tree was not reproducible without undocumented manual steps |
 | [GAP-0020](known-gaps.md) | Open or partial language/ABI feature | Heap- and weak-typed heap-object field stores rejected (undecided ownership policy) |
 | [GAP-0019](known-gaps.md) | Open or partial language/ABI feature | No general inline asm / `@naked` / extern-to-external-symbol FFI; only the narrow `Port.outb`/`Port.inb` primitive exists |
@@ -75,24 +84,29 @@ For each open safety issue: preserve a failing source/C regression, implement th
 | [GAP-0004](known-gaps.md) | Historical resolution / partial resolution | DC-IR's DCDart-flavored source is not yet plain hosted Dart, and `dcc-bootstrap-language` (ADR-0002) sets a precedent it doesn't follow |
 | [GAP-0045](known-gaps.md) | Open or partial language/ABI feature | no owning `String` TYPE; `StrBuf` is now writable but is not in the prelude |
 | [GAP-0046](known-gaps.md) | Open safety issue | a `Str` can dangle; there is no lifetime story for borrowed text |
-| [GAP-0047](known-gaps.md) | Open or partial language/ABI feature | `Str` has no C header mapping, so it cannot cross the FFI boundary |
+| [GAP-0047](known-gaps.md) | Implemented in development; see scoped validation | `Str` has no C header mapping, so it cannot cross the FFI boundary |
 | [GAP-0048](known-gaps.md) | Historical resolution / partial resolution | the conformance suite reported a Linux number as if it were the project's number |
 | [GAP-0049](known-gaps.md) | Open or partial language/ABI feature | prelude imports still require a file path |
 | [GAP-0052](known-gaps.md) | Historical resolution / partial resolution | DC-IR cannot call through a value: no indirect call, no function-pointer type |
 | [GAP-0057](known-gaps.md) | Open or partial language/ABI feature | a Dart function TYPE cannot carry `@owned`, so a consuming callback cannot be passed to a higher-order function |
 | [GAP-0058](known-gaps.md) | Open or partial language/ABI feature | the generated C header spells a function pointer but cannot spell its ownership |
-| [GAP-0059](known-gaps.md) | Open or partial language/ABI feature | an `@extern` C function cannot be torn off as a function pointer |
+| [GAP-0059](known-gaps.md) | Implemented in development; see scoped validation | an `@extern` C function cannot be torn off as a function pointer |
 | [GAP-0060](known-gaps.md) | Existing fix verified | a `void` `@bare` function whose body falls off the end never releases its `@owned` heap parameters |
 | [GAP-0053](known-gaps.md) | Open audit / tooling / representation work | Compiler-synthesized symbols are externally visible and land in the generated C header |
 | [GAP-0050](known-gaps.md) | Benchmark / milestone work; historical claims need reconciliation | there is no heap: ZERO of M3's five benchmarks are writable, and the reason is not the one being tracked |
 | [GAP-0051b](known-gaps.md) | Benchmark / milestone work; historical claims need reconciliation | M3's benchmark suite: 5 of 5 now writable, 0 of 5 written |
 | [GAP-0062](known-gaps.md) | Optimization work | elision removes 1 of 19 retains on the JSON parser, and nothing could measure that until now |
 | [GAP-0063](known-gaps.md) | Open or partial language/ABI feature | floating point landed (ADR-0065) minus five things, each deliberate, one with a workaround already in use |
-| [GAP-0064](known-gaps.md) | Open or partial language/ABI feature | only one DCDart object per link may allocate |
+| [GAP-0064](known-gaps.md) | Implemented in development; see scoped validation | only one DCDart object per link may allocate |
 | [GAP-0068](known-gaps.md) | Optimization work | dcc never emits fused multiply-add; C compiled with the harness flags does by default |
 | [GAP-0075](known-gaps.md) | Documented freestanding FP policy | `@bare` floating point is unavailable by default, and the escape hatch is unsafe by design |
 | [GAP-0073](known-gaps.md) | Fixed / regression added | LLVM loop-idiom recognition turns a `@bare` store loop into a `memset` LIBCALL on freestanding targets |
 | [GAP-0074](known-gaps.md) | Fixed / regression added | a fresh heap return passed DIRECTLY as a constructor argument leaks one reference |
+| [GAP-0076](known-gaps.md) | Fixed in v0.1.3; see release evidence | Error propagation skipped owned locals and unfinished-expression owners |
+| [GAP-0077](known-gaps.md) | Fixed in v0.1.3; see release evidence | Raw and packed loads/stores implicitly promised natural alignment |
+| [GAP-0078](known-gaps.md) | Fixed in v0.1.3; see release evidence | Windows x64 Result C ABI returned the wrong value |
+| [GAP-0079](known-gaps.md) | Implemented in development; newer validation pending | oversized integer shift counts produced LLVM poison |
+| [GAP-0080](known-gaps.md) | Implemented in development; newer validation pending | pointer and callback variables could not advance through control flow |
 
 ## 14 September follow-up — v0.1.3
 

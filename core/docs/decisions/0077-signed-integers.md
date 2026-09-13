@@ -1,6 +1,6 @@
 # ADR-0077 — Signed fixed-width integers and narrow C ABI
 
-Status: implemented in development; cross-platform verification pending.
+Status: verified in development within the [recorded platform scope](../development-validation-2026-09-14.md); not released.
 Date: 2026-09-14.
 
 Expose i8/i16/i32/i64 through the existing Kernel extension-type seam and

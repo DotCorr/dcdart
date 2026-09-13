@@ -1,6 +1,6 @@
 # ADR-0078 — C header type dependencies
 
-Status: implemented in development, cross-platform verification pending.
+Status: verified in development within the [recorded platform scope](../development-validation-2026-09-14.md); not released.
 Date: 2026-09-14.
 
 Discover struct types recursively through fields, pointer pointees and callback

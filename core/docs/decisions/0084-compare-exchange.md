@@ -1,6 +1,6 @@
 # ADR-0084 — Strong compare-exchange
 
-Status: implemented in development; platform verification pending.
+Status: verified in development within the [recorded platform scope](../development-validation-2026-09-14.md); not released.
 Date: 2026-09-14.
 
 Atomic.compareExchange(pointer, expected, desired) performs one strong,

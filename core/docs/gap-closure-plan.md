@@ -136,3 +136,11 @@ is not completion when the requirement is to implement that feature.
 
 - Remaining syntax refusals (GAP-0037): unconditional for loops and direct
   loop returns implemented; body cleanup and nested exit regressions added.
+
+## Verified development checkpoint
+
+See [the 2026-09-14 validation record](development-validation-2026-09-14.md) for
+exact source SHA, CI run and platform scopes. Earlier iteration notes saying
+"pending" describe their state at implementation time; this checkpoint supersedes
+those notes through ADR-0084. It does not close broader subrequirements or the
+publication gate, and later changes require newer evidence.

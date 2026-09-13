@@ -1,6 +1,6 @@
 # ADR-0080 — Raw pointer signatures
 
-Status: implemented in development; platform validation pending.
+Status: verified in development within the [recorded platform scope](../development-validation-2026-09-14.md); not released.
 Date: 2026-09-14.
 
 Pointer<T> and Volatile<T> now lower in function parameters, results and callback

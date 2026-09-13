@@ -1,6 +1,6 @@
 # ADR-0081 — Borrowed text across the C ABI
 
-Status: implemented in development; four-host validation pending.
+Status: verified in development within the [recorded platform scope](../development-validation-2026-09-14.md); not released.
 Date: 2026-09-14.
 
 Str now lowers in function parameters, results and callback signatures to its

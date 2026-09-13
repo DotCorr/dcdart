@@ -1,4 +1,10 @@
 <!-- Current review and release priorities: language-audit-2026-09-13.md. Historical descriptions below are retained as reproductions. -->
+
+For the latest verified development checkpoint, see
+[platform validation](development-validation-2026-09-14.md). Historical and
+implementation-time notes below are not publication claims; newer work and
+remaining subrequirements must be checked separately.
+
 # Known gaps
 
 Work queue, not a confession log (`CLAUDE.md`). Every entry: what was worked around, and the cost.
