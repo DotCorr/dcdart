@@ -4992,6 +4992,8 @@ DCType _lowerSignatureType(
       final decl = type.extensionTypeDeclaration;
       if (decl.enclosingLibrary.importUri == preludeUri) {
         switch (decl.name) {
+          case 'Str':
+            return strStructType;
           case 'u64':
             return DCInt.u64;
           case 'i8':

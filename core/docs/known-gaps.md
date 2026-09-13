@@ -2143,19 +2143,16 @@ exists to remove, so the cost is paid in `@bare` call sites and will have to be 
 ## GAP-0046 — a `Str` can dangle; there is no lifetime story for borrowed text
 
 **Domain:** dcc-lower, spec §3/§7
-**Status:** OPEN — latent today, live the moment GAP-0045 lands
+**Status:** OPEN — reachable through foreign text in development (ADR-0081)
 
 `Str` is non-owning by design (ADR-0053). Nothing prevents one outliving the memory it points at:
 there is no ARC on it, no borrow checker, and no escape analysis. A `Str` into a freed buffer is a
 use-after-free that compiles cleanly.
 
-**This is latent rather than live right now**, and only by accident of what exists: every `Str` that
-can currently be constructed points into `.rodata` and is immortal. The moment `String` (GAP-0045)
-or any heap buffer can back a `Str`, it becomes reachable.
-
-**Cost of the workaround:** none paid yet. The cost is that this is the first question a lifetime
-design has to answer, and answering it *after* code exists that assumes today's immortality is
-strictly harder than answering it before.
+**Current reachability:** source literals still point into immortal `.rodata`,
+but C can now pass or return a Str backed by arbitrary storage (ADR-0081).
+The C caller must keep that storage alive. There is no compiler-enforced escape
+or lifetime guarantee yet, so this requirement remains open and actionable.
 
 **Next step:** decide whether borrowed text gets a lifetime discipline (a `@borrows` annotation, an
 escape check, or a rule that `Str` may not be stored in a heap field) before, not after, `String`.
@@ -2166,24 +2163,15 @@ This is a spec §3 question and should be escalated rather than decided by whoev
 
 ## GAP-0047 — `Str` has no C header mapping, so it cannot cross the FFI boundary
 
-**Domain:** backend (`c_header.dart`)
-**Status:** OPEN — unimplemented, not blocked
+**Domain:** dcc-lower and backend
+**Status:** IMPLEMENTED IN DEVELOPMENT — four-host validation pending.
 
-`c_header.dart` (ADR-0034) has no mapping for `Str`, so a `@bare` function taking or returning one
-is not emitted into the generated header and cannot be called from C. Every other DCDart type that
-crosses the boundary has one.
-
-`{ptr, len}` by value is representable in the C ABI (SysV classifies it as a two-register
-INTEGER,INTEGER pair; Windows x64 passes an 16-byte aggregate by reference), so this is a matter of
-writing the mapping and its ABI test, not a blocked design question.
-
-**Cost of the workaround:** C callers must declare the struct by hand, which is precisely the
-hand-written restatement `c_header.dart` exists to eliminate — and getting it wrong is silent ABI
-corruption rather than a compile error.
-
-**Next step:** add the mapping, and pin it with a conformance case that passes a `Str` C→DCDart and
-DCDart→C on both SysV and Windows x64. Do not add the mapping without the ABI test; ADR-0034 already
-refuses `DCBool` for exactly this class of ambiguity.
+ADR-0081 adds the missing signature mapping; the header's generic struct emitter
+already supports the representation. Real C/DCDart calls test parameters, results
+and callback results, UTF-8, binary/empty slices and unchanged pointer identity.
+Headers document that Str borrows bytes and copies do not transfer ownership.
+The ABI regression runs in every packaged-compiler job, including Windows x64.
+Borrowed storage lifetime is still GAP-0046, not resolved by ABI correctness.
 
 ---
 

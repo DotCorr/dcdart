@@ -103,3 +103,7 @@ is not completion when the requirement is to implement that feature.
 
 - Raw/opaque pointer signatures (GAP-0025): real libc qsort regression passes
   locally; four-host packaging and full conformance verification pending.
+
+- Text C ABI (GAP-0047): bidirectional and callback slice regression passes
+  locally; four-host validation pending. GAP-0046 lifetime safety stays open
+  and is now reachable through foreign text.

@@ -65,6 +65,11 @@ String emitCHeader(DCModule module, {required String headerName}) {
   // value (spec §6 / ADR-0011's @packed layout, ADR-0014's Result), and C
   // requires a complete type before it is used that way.
   final structs = _collectStructs(module);
+  if (structs.any((struct) => struct.name == 'Str')) {
+    buffer.writeln('/* Str borrows bytes; length counts bytes, not characters.');
+    buffer.writeln(' * No terminator is required. Keep storage alive for every use.');
+    buffer.writeln(' * Returning or copying a Str does not transfer ownership. */');
+  }
   for (final struct in structs) {
     buffer.writeln('typedef struct ${struct.name} ${struct.name};');
   }
