@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dotcorr mark — white variant (transparent bg). See black variant for centering math. -->
+  <g transform="translate(168.6 16.6) scale(1.9)">
+    <path d="M 30 90 Q -20 110 -60 150 Q -80 170 -70 185" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+    <path d="M 30 90 Q -15 125 -45 172 Q -55 192 -42 205" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="60" cy="82" rx="38" ry="28" fill="#ffffff"/>
+    <ellipse cx="58" cy="68" rx="28" ry="10" transform="rotate(-20 58 68)" fill="#ffffff"/>
+    <circle cx="92" cy="68" r="22" fill="#ffffff"/>
+    <rect x="112" y="64" width="52" height="7" rx="3.5" fill="#ffffff"/>
+    <circle cx="97" cy="63" r="7" fill="#0A0A0A"/>
+    <circle cx="99" cy="63" r="4" fill="#ffffff"/>
+    <ellipse cx="60" cy="90" rx="14" ry="10" fill="#0A0A0A" fill-opacity="0.18"/>
+  </g>
+</svg>

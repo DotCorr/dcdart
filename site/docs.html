@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Docs — DCDart</title>
+    <meta
+      name="description"
+      content="DCDart language documentation: the type system, ownership and ARC, the C ABI, toolchain, and honest limitations."
+    />
+    <link rel="icon" type="image/svg+xml" href="dotcorr-isometric-black.svg" />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      .docs-layout {
+        display: grid;
+        grid-template-columns: 230px 1fr;
+        gap: 3.5rem;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 3rem 2rem;
+      }
+      .toc {
+        position: sticky;
+        top: 5rem;
+        align-self: start;
+        font-size: 0.9rem;
+      }
+      .toc h4 {
+        margin: 1.6rem 0 0.55rem;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      .toc h4:first-child {
+        margin-top: 0;
+      }
+      .toc a {
+        display: block;
+        color: var(--dim);
+        text-decoration: none;
+        padding: 0.24rem 0;
+        transition: color 0.15s ease;
+      }
+      .toc a:hover {
+        color: var(--ink);
+      }
+      .doc-body {
+        min-width: 0;
+      }
+      .doc-body h1 {
+        font-size: clamp(2.2rem, 4vw, 3.2rem);
+        font-weight: 500;
+        letter-spacing: -0.035em;
+        margin: 0 0 1rem;
+      }
+      .doc-body h2 {
+        margin-top: 3.5rem;
+        padding-top: 1.4rem;
+        border-top: 1px solid var(--line);
+        font-size: 1.75rem;
+        font-weight: 600;
+        letter-spacing: -0.025em;
+      }
+      .doc-body h2:first-of-type {
+        margin-top: 2rem;
+      }
+      .doc-body h3 {
+        margin-top: 2rem;
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+      .doc-body .lede {
+        color: var(--dim);
+        font-size: 1.08rem;
+        max-width: 760px;
+      }
+      .doc-body pre {
+        margin: 1.4rem 0;
+      }
+      .doc-body table {
+        margin: 1.4rem 0;
+      }
+      @media (max-width: 860px) {
+        .docs-layout {
+          grid-template-columns: 1fr;
+        }
+        .toc {
+          position: static;
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip" href="#docs-main">Skip to content</a>
+    <header class="site-header">
+      <a class="logo" href="index.html">
+        <img
+          class="logo-mark"
+          src="dotcorr-isometric-black.svg"
+          alt="DotCorr logo"
+        />
+        <span class="logo-word">DotCorr <strong>DCDart</strong></span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href="/">Overview</a>
+        <a href="docs.html" class="active" aria-current="page">Docs</a>
+        <a href="playground.html">Playground</a>
+      </nav>
+      <a
+        class="gh"
+        href="https://github.com/DotCorr/dcdart"
+        target="_blank"
+        rel="noopener"
+        >GitHub ↗</a
+      >
+    </header>
+
+    <div class="docs-layout">
+      <aside class="toc">
+        <h4>Language</h4>
+        <a href="#philosophy">Philosophy</a>
+        <a href="#types">Types &amp; integers</a>
+        <a href="#ownership">Ownership &amp; ARC</a>
+        <a href="#str">Strings</a>
+        <a href="#result">Result &amp; errors</a>
+        <h4>Systems surface</h4>
+        <a href="#structs">Structs &amp; MMIO</a>
+        <a href="#rodata">Static data</a>
+        <a href="#ffi">C FFI</a>
+        <a href="#ports">Port I/O</a>
+        <h4>Toolchain</h4>
+        <a href="#dcc">dcc</a>
+        <a href="#targets">Targets</a>
+        <a href="#setup">Build &amp; run</a>
+        <h4>Truth</h4>
+        <a href="#browser">Browser execution</a>
+        <a href="#limits">Limitations</a>
+      </aside>
+
+      <main class="doc-body" id="docs-main">
+        <h1>DCDart documentation</h1>
+        <p class="lede">
+          A working subset of Dart, compiled ahead-of-time to native object
+          files with a C ABI. This page documents what is real today; each
+          limitation is one the compiler enforces loudly rather than silently
+          mishandling.
+        </p>
+
+        <h2 id="philosophy">Philosophy</h2>
+        <p>
+          DCDart exists to write systems code — kernels, firmware, drivers,
+          high-performance native libraries — in a language that reads like
+          Dart. Three decisions define it:
+        </p>
+        <ul>
+          <li>
+            <strong>No VM, no JIT, no tracing GC.</strong> Output is a plain
+            object file. <code>@bare</code> objects are linkable into
+            freestanding binaries — even OS kernels.
+          </li>
+          <li>
+            <strong>Dart is the syntax and the type system</strong>, not the
+            runtime. Where Dart's semantics are hostile to systems code (UTF-16
+            strings, wrapping arithmetic, a garbage collector), DCDart diverges
+            and documents the divergence in the spec.
+          </li>
+          <li>
+            <strong>The C ABI is the boundary.</strong> Every export is callable
+            from C with a header generated from the same IR as the code, so
+            declarations cannot drift from the real ABI.
+          </li>
+        </ul>
+        <div class="callout">
+          <b>Divergence you will hit first:</b> <code>"héllo".length</code> is
+          <b>6</b> (UTF-8 bytes), not 5 (UTF-16 code units). DCDart counts bytes
+          because that is what memory and wire formats contain.
+        </div>
+
+        <h2 id="types">Types &amp; integers</h2>
+        <p>
+          DCDart provides fixed-width unsigned integers and IEEE-754
+          floating-point types. Integers require explicit conversions:
+        </p>
+        <table>
+          <tr>
+            <th>Type</th>
+            <th>Width</th>
+            <th>Operators</th>
+          </tr>
+          <tr>
+            <td>
+              <code>u8</code> <code>u16</code> <code>u32</code> <code>u64</code>
+            </td>
+            <td>8/16/32/64-bit unsigned</td>
+            <td>
+              <code>+ - * ~/ %</code> (trapping),
+              <code>&lt; &lt;= &gt; &gt;= == !=</code>,
+              <code>&amp; | ^ &lt;&lt; &gt;&gt;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>f32</code> <code>f64</code></td>
+            <td>32/64-bit IEEE-754</td>
+            <td>
+              <code>+ - * /</code>, comparisons, explicit conversions; NaN and
+              Infinity follow IEEE-754
+            </td>
+          </tr>
+          <tr>
+            <td><code>bool</code></td>
+            <td>i1 internally</td>
+            <td>
+              conditions only — <code>!</code> is not yet supported (GAP-0023)
+            </td>
+          </tr>
+          <tr>
+            <td><code>Pointer&lt;T&gt;</code></td>
+            <td>machine word</td>
+            <td>
+              <code>.fromAddress</code>, <code>.address</code>,
+              <code>.value</code> and <code>.elementAt(n)</code>
+            </td>
+          </tr>
+        </table>
+        <p>
+          Integers do not silently promote. Convert explicitly with
+          <code>.toU8()</code>…<code>.toU64()</code>; there are no signed
+          sized-ints yet (see GAP-0026).
+        </p>
+        <div class="callout warn">
+          <b>Arithmetic traps.</b> Overflow, <code>~/ 0</code> and
+          <code>% 0</code> kill the process (SIGILL/SIGTRAP) rather than
+          wrapping. This is deliberate. The specification’s proposed wrapping
+          operator syntax is not part of the current prelude.
+        </div>
+        <pre><code>@bare
+u64 factorial(u64 n) {
+  var acc = u64(1);
+  var i = u64(2);
+  while (i &lt; n + u64(1)) {
+    acc = acc * i;          // traps at factorial(21) — by design
+    i = i + u64(1);
+  }
+  return acc;
+}</code></pre>
+
+        <h2 id="ownership">Ownership &amp; ARC</h2>
+        <p>
+          Any <code>class extends HeapObject</code> is heap-allocated with
+          automatic reference counting. You never write retain or release — the
+          compiler inserts them, then removes the redundant ones:
+        </p>
+        <table>
+          <tr>
+            <th>Rule</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td>Parameters borrow by default</td>
+            <td>
+              A callee may read a borrowed object; it stays alive for the caller
+            </td>
+          </tr>
+          <tr>
+            <td><code>@owned</code> parameters transfer</td>
+            <td>
+              The caller's reference moves in; a released
+              <code>@owned</code> param is the callee's to free
+            </td>
+          </tr>
+          <tr>
+            <td>Heap fields are retained</td>
+            <td>
+              Storing an object in a field retains it; the owning object's
+              <strong>destructor cascade</strong> releases fields when it dies
+            </td>
+          </tr>
+          <tr>
+            <td><code>Weak&lt;T&gt;</code> nils out</td>
+            <td>
+              A weak reference to a dead object loads as dead rather than
+              dangling; the dying object waits in a zombie slot until weak refs
+              drop too
+            </td>
+          </tr>
+        </table>
+        <p>
+          Elision passes then delete what ownership makes provably redundant — a
+          <code>retain(x); release(x)</code> pair with no intervening release
+          disappears entirely, and passing an object as an
+          <code>@owned</code> argument can compile to zero ARC instructions.
+        </p>
+        <pre><code>class Box extends HeapObject {
+  final u64 value;
+  const Box(this.value);
+}
+
+@bare
+u64 makeBoxAndReadValue(u64 v) {
+  final b = Box(v);   // alloc=1
+  return b.value;     // release=1 (elided to zero retains — checked)
+}                     // heap returns to baseline: verified leak-free</code></pre>
+        <div class="callout ok">
+          <b>Countable, not vibes.</b>
+          <code>dc-objdump --arc file.dart</code> prints the exact
+          <code>alloc</code>/<code>retain</code>/<code>release</code>/<code
+            >weak</code
+          >
+          operations per function at the DC-IR level. The conformance suite
+          asserts these counts.
+        </div>
+
+        <h2 id="str">Strings</h2>
+        <p>
+          <code>Str</code> literals are UTF-8 bytes in <code>.rodata</code>,
+          interned per exact byte sequence. You can measure, compare and slice
+          them:
+        </p>
+        <pre><code>@bare
+u64 greetLen() =&gt; Str("hello from DCDart").length;   // 17 — bytes, always bytes</code></pre>
+        <p>
+          An owning <code>String</code> type is not provided. Borrowed
+          <code>Str</code> slices and a lower-level buffer implementation exist;
+          the buffer is not exposed as a prelude <code>StrBuf</code> type
+          (GAP-0045).
+        </p>
+
+        <h2 id="result">Result &amp; errors</h2>
+        <p>
+          Dart has no <code>?</code> operator and DCDart cannot add syntax, so
+          error propagation is an explicit method:
+        </p>
+        <pre><code>@bare
+Result withdraw(Account acct, u64 amount) {
+  if (acct.balance &lt; amount) {
+    return Result.err(u64(1));        // code 1 = insufficient funds
+  }
+  acct.balance = acct.balance - amount;
+  return Result.ok(acct.balance);
+}
+
+@bare
+Result openAndWithdrawTwice(u64 initial, u64 amount) {
+  final acct = Account(initial);
+  withdraw(acct, amount).propagate(); // failure short-circuits out of the function
+  final afterSecond = withdraw(acct, amount).propagate();
+  return Result.ok(afterSecond);
+}</code></pre>
+        <p>
+          <code>Result</code> returns by value across the C ABI as a real struct
+          — the generated header spells the layout, and a C caller uses it
+          without any special support.
+        </p>
+
+        <h2 id="structs">Structs &amp; MMIO</h2>
+        <p>
+          For C-layout interop, <code>@packed ... extends Struct</code> gives
+          you a zero-cost view over an address. Getters/setters are never
+          executed — <code>dcc-lower</code> reads their declaration order and
+          types to compute byte offsets:
+        </p>
+        <pre><code>@packed
+class Header extends Struct {
+  const Header.fromAddress(u64 address) : super.fromAddress(address);
+  u8 get a =&gt; throw UnimplementedError();   // offset 0 — bodies are never run
+  set a(u8 v) =&gt; throw UnimplementedError();
+  u32 get b =&gt; throw UnimplementedError();  // offset 1 — @packed: no padding
+  set b(u32 v) =&gt; throw UnimplementedError();
+}
+
+@bare
+void writeHeader(u64 address, u8 aVal, u32 bVal) {
+  final h = Header.fromAddress(address);
+  h.a = aVal;
+  h.b = bVal;
+}</code></pre>
+        <p>
+          This example's layout is verified byte-for-byte against a C reference
+          struct compiled with <code>#pragma pack(1)</code>.
+        </p>
+
+        <p>
+          For memory-mapped device registers, use
+          <code>Volatile&lt;T&gt;</code>. Ordinary
+          <code>Pointer&lt;T&gt;</code> accesses may be optimized; volatility
+          and ordering are separate concerns.
+        </p>
+        <h2 id="rodata">Static data</h2>
+        <p>
+          Constants can be pinned into <code>.rodata</code> as bare arrays — no
+          length word, no header, exactly the bytes you declared:
+        </p>
+        <pre><code>@rodata final List&lt;u32&gt; TABLE = const [1, 2, 3, 5, 8];
+
+@bare
+u32 lookup(u64 i) =&gt; TABLE[i.toInt()];   // raw pointer arithmetic under the hood</code></pre>
+
+        <h2 id="ffi">C FFI</h2>
+        <p>FFI works in both directions and is checked, not trusted:</p>
+        <ul>
+          <li>
+            <strong>Outbound:</strong> your source declares
+            <code>@extern</code> symbols (e.g. libc's <code>toupper</code>);
+            <code>dcc</code> records them in a per-object manifest and refuses
+            to produce an object with <em>undeclared</em> undefined symbols.
+          </li>
+          <li>
+            <strong>Inbound:</strong>
+            <code>dcc build --emit-header out.h</code> writes C prototypes
+            generated from the same DC-IR as the object. A C program that
+            includes only the generated header compiles with
+            <code>-Werror</code> — wrong generated types are build failures, not
+            silent ABI corruption.
+          </li>
+        </ul>
+        <div class="callout">
+          <b><code>DCBool</code> is refused in headers</b> rather than mapped to
+          C <code>bool</code> — LLVM <code>i1</code> and C's byte-sized
+          <code>_Bool</code> would produce a header that compiles, links, and is
+          silently wrong.
+        </div>
+
+        <h2 id="ports">Port I/O</h2>
+        <p>
+          x86 port I/O is a first-class pair for kernel work (built for a real
+          downstream OS):
+        </p>
+        <pre><code>@bare
+void uartInit(u64 port) {
+  Port.outb(port + u64(1), u8(0x00));   // disable interrupts
+  Port.outb(port + u64(3), u8(0x80));   // DLAB on
+  // … a real 16550 UART init, 7 outb + 1 inb, verified by disassembly
+}</code></pre>
+
+        <h2 id="dcc">The toolchain: dcc</h2>
+        <pre><code>dcc build --mode bare --target host input.dart -o out.o --emit-header out.h</code></pre>
+        <table>
+          <tr>
+            <th>Flag</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td><code>--mode</code></td>
+            <td>
+              <code>bare</code> (freestanding C-ABI object — the working mode)
+              or <code>hosted</code> (not yet implemented)
+            </td>
+          </tr>
+          <tr>
+            <td><code>--target</code></td>
+            <td>
+              <code>host</code>, <code>macos-arm64</code>,
+              <code>linux-x86_64</code>, <code>windows-x86_64</code>,
+              <code>darwin-x86_64</code>, <code>linux-aarch64</code>,
+              <code>windows-aarch64</code>, <code>bare-x86_64</code> (the
+              original default)
+            </td>
+          </tr>
+          <tr>
+            <td><code>--emit-header</code></td>
+            <td>Also write the generated C header for every exported symbol</td>
+          </tr>
+          <tr>
+            <td><code>-o</code></td>
+            <td>Output object path</td>
+          </tr>
+        </table>
+        <p>
+          Supporting tools: <code>dc-objdump --arc</code> (per-function ARC
+          counts), <code>scripts/verify-freestanding.sh</code> (the
+          zero-undefined-symbols spine check).
+        </p>
+
+        <h2 id="targets">Targets</h2>
+        <p>
+          All eight targets cross-compile from one machine and are
+          zero-undefined-symbol clean — ELF, Mach-O and COFF across x86-64 and
+          aarch64. <code>--mode</code> (language subset) and
+          <code>--target</code> (machine) are orthogonal: a
+          <code>@bare</code> object is a plain C-ABI object, which is why DCDart
+          code links into ordinary hosted programs just as happily as into
+          freestanding ones.
+        </p>
+
+        <h2 id="setup">Build &amp; run</h2>
+        <p>
+          On macOS with Apple Silicon, install v0.1.0 from the DotCorr tap. A
+          Dart SDK 3.12.2 must be available on <code>PATH</code>, or set
+          <code>DCDART_DART</code> to its executable.
+        </p>
+        <pre><code>brew tap dotcorr/tap https://github.com/DotCorr/homebrew-tap
+brew install dotcorr/tap/dcdart
+
+# compile a program — pass the shipped prelude; its path is matched lexically,
+# so spell it the same in your source's import
+PRELUDE="$(brew --prefix)/opt/dcdart/libexec/core/runtime/dc-core-bare/prelude.dart"
+dcc build --mode bare --target host main.dart -o main.o --emit-header main.h --prelude "$PRELUDE"</code></pre>
+        <p>
+          A Dart SDK 3.12.2 on <code>PATH</code> (or <code>DCDART_DART</code>)
+          is required for the kernel-frontend stage.
+        </p>
+        <p>
+          Create <code>main.dart</code> with the same absolute prelude path
+          printed by <code>echo "$PRELUDE"</code>. On a standard Apple Silicon
+          Homebrew installation:
+        </p>
+        <pre><code>import '/opt/homebrew/opt/dcdart/libexec/core/runtime/dc-core-bare/prelude.dart';
+
+@bare
+u64 sumTo(u64 n) {
+  var i = u64(0);
+  var total = u64(0);
+  while (i &lt; n) {
+    total = total + i;
+    i = i + u64(1);
+  }
+  return total;
+}</code></pre>
+        <p>
+          Run the <code>dcc build</code> command above. It creates an object
+          file and header. To run it, save this C host as <code>host.c</code>:
+        </p>
+        <pre><code>#include &lt;stdio.h&gt;
+#include "main.h"
+int main(void) {
+  printf("%llu\n", (unsigned long long)sumTo(100));
+  return 0;
+}</code></pre>
+        <pre><code>clang host.c main.o -o example
+./example
+# 4950</code></pre>
+        <p>
+          The installed Homebrew v0.1.0 compiler was verified with this
+          calculation on 13 September 2026.
+        </p>
+        <p>
+          The canonical source walkthrough is
+          <a
+            href="https://github.com/DotCorr/dcdart/blob/main/core/docs/testing-setup.md"
+            ><code>core/docs/testing-setup.md</code></a
+          >. The short version:
+        </p>
+        <pre><code>git clone https://github.com/DotCorr/dcdart
+cd dcdart
+bash core/scripts/vendor-frontend.sh   # required — restores the vendored frontend
+source core/scripts/dcdart-env.sh
+bash core/tests/run-conformance.sh     # inspect the current results</code></pre>
+        <p>
+          Every program is then compiled to an object and linked into an
+          ordinary C binary — <code>main</code> lives in a <code>.c</code> file
+          because there is no runtime to start one.
+        </p>
+
+        <h2 id="browser">Browser playground</h2>
+        <p>
+          The <a href="playground.html">playground</a> runs real DCDart-compiled
+          WebAssembly with editable function inputs. It includes the
+          compiler-generated allocator and ARC for heap examples; live
+          allocations are read from WASM memory after each return.
+        </p>
+        <p>
+          Compilation is performed at site build time. The browser does not
+          compile edited source. The experimental adapter uses the unchanged
+          DCDart lowerer and LLVM emitter, then LLVM’s wasm32 backend; it is not
+          a general WASM target in <code>dcc</code>. Arbitrary source
+          compilation, hosted features and operating-system APIs are unavailable
+          here.
+        </p>
+        <p>
+          Checked unsigned 64-bit multiplication may require LLVM’s
+          <code>__multi3</code> helper on wasm32. That helper is not bundled, so
+          this playground exposes verified division, remainder and GCD functions
+          instead. Every published module has zero unresolved imports.
+        </p>
+        <h2 id="limits">Limitations, stated plainly</h2>
+        <ul>
+          <li>
+            Capturing closures are a compile <em>error</em> by design until
+            value ownership is specified (non-capturing closures and function
+            pointers work).
+          </li>
+          <li>
+            Generic functions and supported generic classes are monomorphized.
+            Unsupported receiver shapes are documented in GAP-0056.
+          </li>
+          <li>
+            No dynamic dispatch or vtables — every heap object's concrete class
+            is statically known; cycle collection and <code>unowned</code> are
+            sequenced after the weak/destructor groundwork that now exists.
+          </li>
+          <li>
+            No signed sized-ints, no boolean <code>!</code>, no general
+            <code>asm</code>/<code>@naked</code>. Narrow port I/O and extern FFI
+            are done.
+          </li>
+          <li>
+            Qualified fields and managed reference arrays have remaining
+            restrictions; consult the current gap records before relying on
+            these forms.
+          </li>
+        </ul>
+        <p>
+          Each limitation has a number and an entry in
+          <a
+            href="https://github.com/DotCorr/dcdart/blob/main/core/docs/known-gaps.md"
+            >known-gaps.md ↗</a
+          >. Unsupported features are reported by the compiler. The gap records
+          distinguish implemented behavior from planned language features.
+        </p>
+      </main>
+    </div>
+
+    <footer class="site-footer">
+      <div class="container">
+        <span>© 2026 DotCorr · Apache-2.0 with LLVM exceptions</span>
+        <span
+          ><a href="https://github.com/DotCorr/dcdart"
+            >github.com/DotCorr/dcdart</a
+          ></span
+        >
+      </div>
+    </footer>
+  </body>
+</html>

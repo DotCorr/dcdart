@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DCDart — Native by nature</title>
+    <meta
+      name="description"
+      content="Dart syntax. Native code. A systems language with ARC memory management and a plain C ABI. Install DCDart or run real compiled WebAssembly in your browser."
+    />
+    <meta name="theme-color" content="#f4f3ef" />
+    <link rel="canonical" href="https://dcdart.dotcorr.com/" />
+    <link rel="icon" href="dotcorr-isometric-black.svg" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="site.js" type="module"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="logo" href="/"
+        ><img class="logo-mark" src="dotcorr-isometric-black.svg" alt="" /><span
+          class="logo-word"
+          >DotCorr<strong>DCDart</strong></span
+        ></a
+      >
+      <nav aria-label="Main navigation">
+        <a href="/" class="active" aria-current="page">Overview</a
+        ><a href="docs.html">Docs</a><a href="playground.html">Playground</a>
+      </nav>
+      <a class="gh" href="https://github.com/DotCorr/dcdart">GitHub ↗</a>
+    </header>
+    <main id="main" class="shell">
+      <section class="hero">
+        <div class="hero-top">
+          <span class="eyebrow"
+            ><i class="signal"></i>A language for the machine</span
+          ><a
+            class="release-link"
+            href="https://github.com/DotCorr/dcdart/releases/tag/v0.1.0"
+            >v0.1.0 / Early release ↗</a
+          >
+        </div>
+        <div class="hero-grid">
+          <div>
+            <h1>
+              Dart syntax.<br />Native by nature.<br /><span
+                >Yours to build.</span
+              >
+            </h1>
+            <p class="lead">
+              The familiarity of Dart. The control of a systems language.
+              Ahead-of-time compilation, automatic reference counting, and a
+              direct line to C.
+            </p>
+            <div class="cta-row">
+              <a class="btn primary" href="playground.html"
+                >Run DCDart <span>↗</span></a
+              ><a class="btn" href="#install"
+                >Get the compiler <span>↓</span></a
+              >
+            </div>
+          </div>
+          <div
+            class="device"
+            aria-label="DCDart compiler: source to native code"
+          >
+            <div class="device-top">
+              <span>DC / LANGUAGE SYSTEM</span
+              ><span><i class="signal"></i> 001</span>
+            </div>
+            <img class="device-word" src="dcdart-dots.svg" alt="DCDart" />
+            <div class="device-window">
+              <pre><span class="kw">@bare</span>
+u64 add(u64 a, u64 b) {
+  <span class="kw">return</span> a + b;
+}</pre>
+            </div>
+            <div class="device-flow">
+              <span>SOURCE.dart</span><b>→</b><span>LLVM</span><b>→</b
+              ><span>NATIVE.o</span>
+            </div>
+            <div class="device-bottom">
+              <span>NO VM · NO JIT · NO TRACING GC</span
+              ><span>DESIGNED BY DOTCORR</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      <div class="spec-strip">
+        <div><small>01 / COMPILE</small><strong>Ahead of time</strong></div>
+        <div>
+          <small>02 / MEMORY</small><strong>ARC + static elision</strong>
+        </div>
+        <div><small>03 / INTERFACE</small><strong>Plain C ABI</strong></div>
+        <div>
+          <small>04 / CHARACTER</small><strong>Unapologetically native</strong>
+        </div>
+      </div>
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">[01] / The language</span>
+            <h2>Familiar on the surface.<br />Precise underneath.</h2>
+          </div>
+          <p>
+            A working subset of Dart, built for systems code. Explicit where it
+            matters. Readable where it counts.
+          </p>
+        </div>
+        <div class="features">
+          <article class="feature">
+            <span class="num">(01)</span>
+            <h3>Memory, without the mystery.</h3>
+            <p>
+              The compiler inserts reference counting and removes redundant
+              operations. Objects stay put, so C can work with stable pointers.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="num">(02)</span>
+            <h3>Every bit has a purpose.</h3>
+            <p>
+              Fixed-width integers. Explicit conversions. Arithmetic that traps
+              on overflow by default. Control that survives compilation.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="num">(03)</span>
+            <h3>Bring your own world.</h3>
+            <p>
+              Compile to object files and link with C. Freestanding code can
+              live in firmware, kernels, or the native library you are building
+              next.
+            </p>
+          </article>
+        </div>
+      </section>
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">[02] / Try it here</span>
+            <h2>Real code. Your input.</h2>
+          </div>
+          <p>
+            This function was compiled by DCDart to WebAssembly. Change the
+            number and run it on your own machine, right here.
+          </p>
+        </div>
+        <div class="run-preview">
+          <div class="preview-code">
+            <span class="serial">LOOP.dart / Compiled source</span>
+            <pre>
+@bare
+u64 sumTo(u64 n) {
+  var i = u64(0);
+  var total = u64(0);
+  while (i &lt; n) {
+    total = total + i;
+    i = i + u64(1);
+  }
+  return total;
+}</pre>
+          </div>
+          <form id="quick-run" class="preview-controls">
+            <label for="quick-n" class="control-label"
+              >n / Sum from 0 to n − 1</label
+            >
+            <div class="quick-row">
+              <input
+                id="quick-n"
+                name="n"
+                value="100"
+                inputmode="numeric"
+                autocomplete="off"
+                aria-describedby="quick-status"
+                required
+              /><button class="btn dark" id="quick-button" type="submit">
+                Run ↗
+              </button>
+            </div>
+            <output id="quick-result" class="result-number" aria-live="polite"
+              >—</output
+            >
+            <p id="quick-status" class="mini-status" role="status">
+              Ready when you are. Executed locally with WebAssembly.
+            </p>
+            <p class="mini-status">
+              Source is compiled ahead of time.<br />Every result is computed
+              from your input.
+            </p>
+          </form>
+        </div>
+        <div class="under-link">
+          <span>No account. No code sent to a server.</span
+          ><a href="playground.html">Explore ARC, recursion &amp; more ↗</a>
+        </div>
+        <noscript
+          ><p class="noscript">
+            Enable JavaScript to run the WebAssembly playground. The
+            documentation and compiler downloads work without it.
+          </p></noscript
+        >
+      </section>
+      <section class="section" id="install">
+        <div class="install-grid">
+          <div>
+            <span class="eyebrow">[03] / Get started</span>
+            <h2>A small start.<br />A native binary.</h2>
+            <p>
+              v0.1.0 is available for macOS on Apple Silicon through the DotCorr
+              Homebrew tap.
+            </p>
+            <a href="docs.html#setup">Build your first program ↗</a>
+          </div>
+          <div>
+            <div class="terminal">
+              <div class="terminal-top">
+                <span>MACOS / APPLE SILICON</span
+                ><button
+                  class="copy"
+                  data-copy="install-command"
+                  aria-label="Copy Homebrew installation commands"
+                >
+                  COPY ↗
+                </button>
+              </div>
+              <pre id="install-command">
+brew tap dotcorr/tap https://github.com/DotCorr/homebrew-tap
+brew install dotcorr/tap/dcdart</pre>
+            </div>
+            <p class="install-note">
+              Compiling source also requires
+              <a href="https://dart.dev/get-dart/archive">Dart SDK 3.12.2</a>.
+              Use an explicit prelude path, as shown in the
+              <a href="docs.html#setup">setup guide</a>.
+            </p>
+            <p class="install-note">
+              <a href="https://github.com/DotCorr/dcdart/releases/tag/v0.1.0"
+                >Download the release archive ↗</a
+              >
+            </p>
+          </div>
+        </div>
+      </section>
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">[04] / Out in the open</span>
+            <h2>Early. Working. Evolving.</h2>
+          </div>
+          <p>
+            The compiler is real; the language is still growing. We publish the
+            limits alongside the code.
+          </p>
+        </div>
+        <table class="status-table">
+          <thead>
+            <tr>
+              <th scope="col">Distribution</th>
+              <th scope="col">Availability</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <a
+                  href="https://github.com/DotCorr/homebrew-tap/blob/main/Formula/dcdart.rb"
+                  >Homebrew / DotCorr tap ↗</a
+                >
+              </td>
+              <td>macOS · Apple Silicon</td>
+              <td><span class="tag live">v0.1.0 / LIVE</span></td>
+            </tr>
+            <tr>
+              <td>
+                <a href="https://github.com/DotCorr/dcdart/releases/tag/v0.1.0"
+                  >GitHub Releases ↗</a
+                >
+              </td>
+              <td>Archive + Homebrew bottle</td>
+              <td><span class="tag live">v0.1.0 / LIVE</span></td>
+            </tr>
+            <tr>
+              <td>npm · pub.dev · crates.io · PyPI</td>
+              <td>No dcdart package found</td>
+              <td><span class="tag">NOT LISTED</span></td>
+            </tr>
+            <tr>
+              <td>Homebrew core · AUR</td>
+              <td>No dcdart entry found</td>
+              <td><span class="tag">NOT LISTED</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="under-link">
+          <span>Registry checks: 13 September 2026.</span
+          ><a href="docs.html#limits">Read the current limitations ↗</a>
+        </div>
+      </section>
+      <footer class="foot">
+        <span>© 2026 DOTCORR / DCDART</span>
+        <div class="foot-links">
+          <a href="https://github.com/DotCorr/dcdart/blob/main/LICENSE"
+            >Apache 2.0 + LLVM exception ↗</a
+          ><a href="https://github.com/DotCorr/dcdart">Source ↗</a>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>

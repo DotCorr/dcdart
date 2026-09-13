@@ -11,6 +11,29 @@ record — lives under [`core/`](core/README.md). Start there.
 — prerequisites, the fresh-clone step that a clone cannot build without, a first program end to end,
 and the two behaviours (byte-counted `.length`, trapping arithmetic) that surprise people.
 
+## Install (macOS, Apple Silicon)
+
+```sh
+brew tap dotcorr/tap https://github.com/DotCorr/homebrew-tap
+brew install dotcorr/tap/dcdart
+```
+
+Then compile a program (pass the shipped prelude — its path is matched lexically, so spell it the
+same in your source's import):
+
+```sh
+dcc build --mode bare --target host main.dart -o main.o --emit-header main.h \
+  --prelude "$(brew --prefix)/opt/dcdart/libexec/core/runtime/dc-core-bare/prelude.dart"
+```
+
+A Dart SDK 3.12.2 on `PATH` (or `DCDART_DART`) is required for the kernel-frontend stage.
+
+## Website and browser playground
+
+[Website](https://dcdart.pages.dev) · [Playground](https://dcdart.pages.dev/playground) · [Documentation](https://dcdart.pages.dev/docs)
+
+The playground executes actual DCDart-compiled WebAssembly with editable inputs. Source is compiled ahead of time; editing and compiling arbitrary DCDart still requires the local toolchain. Website sources and reproducible runtime builds live in [`site/`](site/README.md).
+
 ## The two numbers that define the project
 
 1. **ARC overhead vs. C.** Target ≤10% geometric mean. Gated at M3.
