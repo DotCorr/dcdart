@@ -1,6 +1,6 @@
 # ADR-0076 — Windows x64 two-word aggregate ABI
 
-Date: 2026-09-14. Status: implemented; native Windows CI required.
+Date: 2026-09-14. Status: implemented in v0.1.3; native Windows CI 34786871909 passed.
 
 The expanded propagation regression returned an incorrect Result payload on
 Windows while the heap count was zero. Microsoft x64 returns this 16-byte C

@@ -1,6 +1,6 @@
 # DCDart 0.1.3 distribution and platform support
 
-Release candidate prepared 14 September 2026; publication requires verified native assets and matching live package manifests.
+Cross-checked 14 September 2026 against the published tag, verified native assets, and live package manifests.
 
 | Compiler runs on | Official installation | Verification |
 |---|---|---|

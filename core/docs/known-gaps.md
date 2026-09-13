@@ -1089,7 +1089,7 @@ mis-specified ordering — mapping `release` to `acquire` would pass the count a
 ## GAP-0042 — Atomic alignment was promised without checking raw addresses
 
 **Domain:** backend
-**Status:** FIXED in next-release source — regression added, ADR-0075
+**Status:** FIXED in v0.1.3 — regression added, ADR-0075
 
 Every atomic load, store, exchange, and fetch operation now checks natural alignment
 before issuing the LLVM atomic instruction. Misaligned u16/u32/u64 addresses deliberately
@@ -3105,7 +3105,7 @@ alongside the fix.
 ## GAP-0076 — Error propagation skipped owned locals and unfinished-expression owners
 
 **Domain:** dcc-lower, ARC
-**Status:** FIXED in next-release source — regression added, ADR-0075
+**Status:** FIXED in v0.1.3 — regression added, ADR-0075
 
 `Result.propagate()` emitted a direct error return without the cleanup used by an
 explicit return. It now releases heap/weak locals and owned parameters on the error
@@ -3122,7 +3122,7 @@ zero live objects after each call. Raw/elided ARC counts retain both exit cleanu
 ## GAP-0077 — Raw and packed loads/stores implicitly promised natural alignment
 
 **Domain:** backend
-**Status:** FIXED in next-release source — backend regression added
+**Status:** FIXED in v0.1.3 — backend regression added
 
 LLVM interprets an omitted load/store alignment as ABI alignment. Ordinary and
 volatile pointers can address arbitrary bytes, and packed fields deliberately
@@ -3136,7 +3136,7 @@ This does not make arbitrary MMIO access widths safe for every device.
 ## GAP-0078 — Windows x64 Result C ABI returned the wrong value
 
 **Domain:** backend, C ABI
-**Status:** FIXED in next-release source; Windows execution must pass CI
+**Status:** FIXED in v0.1.3; native Windows packaged-compiler CI passed
 
 Expanding the packaged Windows compiler test to Result propagation reproduced a
 wrong payload with zero live objects. LLVM aggregate returns alone do not implement

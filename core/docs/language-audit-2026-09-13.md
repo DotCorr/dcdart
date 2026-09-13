@@ -17,9 +17,9 @@ For each open safety issue: preserve a failing source/C regression, implement th
 
 ## Remaining priorities
 
-1. Foreign heap-pointer validation, read-only pointer provenance, and borrowed text lifetimes remain safety work. Source nullable-access rejection is already enforced by the frontend; the previous contrary claim was disproved by a regression. Atomic alignment is guarded in next-release source (ADR-0075).
+1. Foreign heap-pointer validation, read-only pointer provenance, and borrowed text lifetimes remain safety work. Source nullable-access rejection is already enforced by the frontend; the previous contrary claim was disproved by a regression. Atomic alignment is guarded in v0.1.3 (ADR-0075).
 2. Multi-object runtime linking, signed integer types/division, pointer/Str C ABI support, generic methods and imported-library compilation. These require their own regression cases and compatibility decisions.
-3. Error propagation cleanup now covers owned locals and pending expression arguments/receivers in next-release source (GAP-0076). The new regression checks both paths and live-object counts.
+3. Error propagation cleanup now covers owned locals and pending expression arguments/receivers in v0.1.3 (GAP-0076). The new regression checks both paths and live-object counts.
 4. Benchmark and elision improvements follow correctness. OS MMIO migration belongs to the OS checkout and is not a compiler release fix.
 
 ## Recorded-gap inventory
@@ -94,18 +94,20 @@ For each open safety issue: preserve a failing source/C regression, implement th
 | [GAP-0073](known-gaps.md) | Fixed / regression added | LLVM loop-idiom recognition turns a `@bare` store loop into a `memset` LIBCALL on freestanding targets |
 | [GAP-0074](known-gaps.md) | Fixed / regression added | a fresh heap return passed DIRECTLY as a constructor argument leaks one reference |
 
-## 14 September follow-up (not yet a published release)
+## 14 September follow-up — v0.1.3
 
 - Reproduced and fixed unchecked atomic alignment across all operations and widths.
 - Reproduced propagation leaks for a local owner and an unfinished call argument;
   added scoped cleanup for strong/weak locals, owned parameters and expression owners.
 - Corrected GAP-0038 with compile-failure and successful nullable-flow tests.
 - Local full-suite attempt exhausted disk space; its failures/skips are not validation.
-  Clean cross-platform CI is required before publishing these changes.
+  Clean cross-platform CI subsequently passed: 54 suites, zero failures/skips on macOS ARM64 and both Linux architectures.
 
 - GAP-0077: ordinary/volatile loads and stores now explicitly permit byte
   alignment, making the existing packed-field layout contract valid in LLVM.
 
 - GAP-0078: expanded Windows tests exposed a Result C ABI mismatch. Definitions,
   declarations and direct/indirect calls now use the Windows return-buffer and
-  aggregate-argument convention; native CI remains the publication gate.
+  aggregate-argument convention; native Windows packaged-compiler CI passed.
+
+Final native release evidence: [run 34786871909](https://github.com/DotCorr/dcdart/actions/runs/34786871909), compiler source `e8c5c4be8607e092b7322f29ac46ae7cdfcd535f`. Windows executes the propagation/aggregate interoperability regression; the full 54-suite count applies to macOS ARM64 and Linux x86-64/ARM64. The v0.1.3 source passed 12 backend tests and 52 optimizer tests in CI.

@@ -1,6 +1,6 @@
 # ADR-0075 — Atomic alignment and error-path ownership
 
-Date: 2026-09-14. Status: implemented for the next release; see CI for validation.
+Date: 2026-09-14. Status: implemented in v0.1.3; release CI 34786871909 passed.
 
 Raw addresses cannot justify LLVM atomic alignment promises. Emit a low-bit check
 before every multi-byte atomic, trap on failure, and use the function emitter's
