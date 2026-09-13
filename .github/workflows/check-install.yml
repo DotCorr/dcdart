@@ -33,7 +33,7 @@ jobs:
           brew install --build-bottle dcdart
           python3 site/tools/check-install.py "$(brew --prefix dcdart)/libexec"
           if [ "$RUNNER_OS" = macOS ]; then
-            brew bottle --json --no-rebuild --root-url=https://github.com/DotCorr/dcdart/releases/download/v0.1.2 dcdart
+            brew bottle --json --no-rebuild --root-url=https://github.com/DotCorr/dcdart/releases/download/v0.1.3 dcdart
           fi
       - uses: actions/upload-artifact@v4
         if: runner.os == 'macOS'
