@@ -221,7 +221,8 @@
             <td><code>bool</code></td>
             <td>i1 internally</td>
             <td>
-              conditions only — <code>!</code> is not yet supported (GAP-0023)
+              Literals, comparisons, <code>!</code>, and short-circuit
+              <code>&amp;&amp;</code> / <code>||</code>; no boolean C ABI
             </td>
           </tr>
           <tr>
@@ -746,6 +747,10 @@ bash core/tests/run-conformance.sh     # inspect the current results</code></pre
           compilation.
         </p>
         <h2 id="limits">Limitations, stated plainly</h2>
+        <p>v0.1.2 fixes temporary-object ownership, borrowed returns, method
+          ownership, and freestanding buffer loops. Remaining safety and
+          language work is tracked in the
+          <a href="https://github.com/DotCorr/dcdart/blob/main/core/docs/language-audit-2026-09-13.md">language audit</a>.</p>
         <ul>
           <li>
             Capturing closures are a compile <em>error</em> by design until
@@ -762,12 +767,14 @@ bash core/tests/run-conformance.sh     # inspect the current results</code></pre
             sequenced after the weak/destructor groundwork that now exists.
           </li>
           <li>
-            No signed sized-ints, no boolean <code>!</code>, no general
+            No signed sized-ints or general
             <code>asm</code>/<code>@naked</code>. Narrow port I/O and extern FFI
             are done.
           </li>
           <li>
-            Qualified fields and managed reference arrays have remaining
+            Null-dereference checks, atomic alignment, borrowed-text lifetimes,
+            and linking several allocating objects still have open work.
+            Qualified fields and managed reference arrays also have remaining
             restrictions; consult the current gap records before relying on
             these forms.
           </li>

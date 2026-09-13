@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "compilerCommit": "66708fbcc6fece5edd106710ab0a4498dc169a5c",
+  "compilerCommit": "4b810d4a6166ea2b8bed722712050484de6ea1fa",
   "dartVersion": "Dart SDK version: 3.12.2 (stable) (Tue Jun 9 01:11:39 2026 -0700) on \"macos_arm64\"",
   "clangVersion": "Homebrew clang version 22.1.8",
   "compilerHashes": {
-    "core/dcc-lower/lib/lower.dart": "92dfeb1df81bcefde52c6df58897a70e3a9a12c48bf5d5c39bbf60147b01280b",
-    "core/backend/lib/llvm_emit.dart": "f478d033904a6d5b7095793b1f580e806abc3441545d12369115e3b4e9c67006",
+    "core/dcc-lower/lib/lower.dart": "0efd2183835258f9ad1ded83d1e72598e90da5b96f5fc1823235f0077041f2f6",
+    "core/backend/lib/llvm_emit.dart": "673142e897f04e347fae3c3d6246e3eaee64f3706e8818019650d6ee0fcca8dd",
     "core/runtime/dc-core-bare/prelude.dart": "67c6054f5c6d19c10baaa7023a2a3ddfa93687b7f79de2e4f6575c1865b47989"
   },
   "execution": "Ahead-of-time DCDart → Kernel IR → DC-IR → LLVM → WebAssembly. Source compilation happens at build time; inputs execute locally in a browser worker.",
@@ -50,7 +50,7 @@
       "bytes": 480,
       "sha256": "42ef4136388ad22811c87c6138aa4e607ad9f237bc87287d811ddae2bd7cb70c",
       "sourceSha256": "59c90d6b1ccd54debc59d985239635dc04dba54f47f69200b7a5c72c63ef8e7e",
-      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/66708fbcc6fece5edd106710ab0a4498dc169a5c/core/examples/m2-loop/loop.dart"
+      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/4b810d4a6166ea2b8bed722712050484de6ea1fa/core/examples/m2-loop/loop.dart"
     },
     {
       "id": "collatz",
@@ -87,7 +87,7 @@
       "bytes": 887,
       "sha256": "fe190ec8910e8a724f635b29a50f5d7a84d9a47afa1c0396afb90a31c8477620",
       "sourceSha256": "86df2630b730352af60b415e97d8de492e06165e920edfe2c405c07d7510a2b9",
-      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/66708fbcc6fece5edd106710ab0a4498dc169a5c/core/examples/demo-collatz/collatz.dart"
+      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/4b810d4a6166ea2b8bed722712050484de6ea1fa/core/examples/demo-collatz/collatz.dart"
     },
     {
       "id": "recursion",
@@ -113,7 +113,7 @@
       "bytes": 622,
       "sha256": "d443485d870faf3ad2af4bddafe8549dd6bb52f18da3ff1403689896eca9c21e",
       "sourceSha256": "8eeba2c730cdfa876a118f640622efbe8413645b7e6d341af862a775b11d4a55",
-      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/66708fbcc6fece5edd106710ab0a4498dc169a5c/core/examples/m2-recursion/recursion.dart"
+      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/4b810d4a6166ea2b8bed722712050484de6ea1fa/core/examples/m2-recursion/recursion.dart"
     },
     {
       "id": "arith",
@@ -187,7 +187,7 @@
       "bytes": 465,
       "sha256": "e66e117b717e14c9c035a61b9cb306c7c28a7e34bc6d23750bae85e49d7898aa",
       "sourceSha256": "59ac78384eebbe351118b6acc05fae64658449324e1a9fec634207c87b55e910",
-      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/66708fbcc6fece5edd106710ab0a4498dc169a5c/core/examples/m2-arith/arith.dart"
+      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/4b810d4a6166ea2b8bed722712050484de6ea1fa/core/examples/m2-arith/arith.dart"
     },
     {
       "id": "float",
@@ -245,7 +245,7 @@
       "bytes": 327,
       "sha256": "83b5c2bca4a9ffdda91bda66a4c953768a915fa9f1cfcb59e928388b474989f7",
       "sourceSha256": "a1445f4a65f261a834a9dd7c49c732068e868a5dcee9394e433fbcf193a3b8cd",
-      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/66708fbcc6fece5edd106710ab0a4498dc169a5c/core/examples/m4-float-arith/floatarith.dart"
+      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/4b810d4a6166ea2b8bed722712050484de6ea1fa/core/examples/m4-float-arith/floatarith.dart"
     }
   ]
 }

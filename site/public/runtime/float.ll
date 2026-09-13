@@ -259,4 +259,4 @@ blk3:
   ret double %v9
 }
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "no-builtins" }

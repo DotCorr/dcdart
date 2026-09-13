@@ -195,4 +195,4 @@ releaseDone36:
   ret i64 %v18
 }
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "no-builtins" }

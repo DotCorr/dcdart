@@ -452,4 +452,4 @@ blk3:
   ret i64 %v6
 }
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "no-builtins" }
