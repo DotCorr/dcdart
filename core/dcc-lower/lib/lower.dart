@@ -604,6 +604,7 @@ DCType _externSignatureType(
   );
   bool hasManagedValue(DCType value) {
     if (value is DCHeapPointer || value is DCWeakPointer) return true;
+    if (value is DCPointer) return hasManagedValue(value.pointee);
     if (value is DCFuncPtr) {
       return hasManagedValue(value.returnType) ||
           value.params.any((parameter) => hasManagedValue(parameter.type));
@@ -1374,6 +1375,11 @@ class _BareFunctionLowerer {
 
         if (_isPointerValueMember(target) || _isVolatileValueMember(target)) {
           final pointer = _lowerExpression(expr.receiver);
+          if (pointer.type is DCPointer &&
+              (pointer.type as DCPointer).pointee is DCVoid) {
+            throw DccLowerError('"$context": cannot store Pointer<void>; '
+                'convert to a sized pointer first');
+          }
           final value = _lowerExpression(expr.value);
           // (ADR-0069, the device/ordinary split.) `Volatile<T>.value = x`
           // is DCDart's MMIO mechanism (spec §6) and stays volatile: the
@@ -3235,6 +3241,10 @@ class _BareFunctionLowerer {
           );
         }
         final pointeeType = (pointer.type as DCPointer).pointee;
+        if (pointeeType is DCVoid) {
+          throw DccLowerError('"$context": cannot load Pointer<void>; '
+              'convert to a sized pointer first');
+        }
         final dest = DCValue(_allocId(), pointeeType);
         // (ADR-0069) `Volatile<T>.value` reads stay volatile — without the
         // keyword, `-O2` deletes a register read-back entirely (ADR-0041,
@@ -3279,6 +3289,10 @@ class _BareFunctionLowerer {
             '"$context": .elementAt on a non-pointer DCValue '
             '(${receiver.type})',
           );
+        }
+        if (receiverType.pointee is DCVoid) {
+          throw DccLowerError('"$context": cannot index Pointer<void>; '
+              'convert to a sized pointer first');
         }
         final index = _lowerExpression(expr.arguments.positional.single);
         if (index.type != DCInt.u64) {
@@ -4822,6 +4836,7 @@ class _BareFunctionLowerer {
         'arguments, expected exactly 1',
       );
     }
+    if (typeArgs.single is VoidType) return const DCVoid();
     return _lowerType(typeArgs.single, context: '$context Pointer type argument');
   }
 
@@ -5013,6 +5028,19 @@ DCType _lowerSignatureType(
       // e.g. `bool`/`int` which crash under --no-link-platform
       // (kernel_frontend.dart).
       final cls = type.classNode;
+      if ((cls.name == 'Pointer' || cls.name == 'Volatile') &&
+          cls.enclosingLibrary.importUri == preludeUri) {
+        final pointee = type.typeArguments.single is VoidType
+            ? const DCVoid()
+            : _lowerSignatureType(type.typeArguments.single,
+            preludeUri: preludeUri, heapLayouts: heapLayouts,
+            context: '$context pointer element');
+        if (pointee is DCHeapPointer || pointee is DCWeakPointer) {
+          throw DccLowerError('$context: raw pointers to managed references '
+              'require managed array ownership support (GAP-0061)');
+        }
+        return DCPointer(pointee);
+      }
       if (cls.name == 'Result' && cls.enclosingLibrary.importUri == preludeUri) {
         return resultStructType;
       }

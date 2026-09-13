@@ -1343,26 +1343,15 @@ external symbol to `verify-freestanding.sh`.
 
 ## GAP-0025 — `Pointer<T>` cannot appear in a function signature, which most real C APIs need
 
-**Domain:** dcc-lower (M1, surfaced by ADR-0038's extern FFI)
-**Status:** OPEN — pre-existing limit, not widened by ADR-0038, but now load-bearing
+**Domain:** dcc-lower
+**Status:** IMPLEMENTED IN DEVELOPMENT — cross-platform validation pending.
 
-`_lowerSignatureType` maps `u8`/`u16`/`u32`/`u64` (extension types), `Result`, `HeapObject`
-subclasses, and `Weak<T>`. It does **not** map `Pointer<T>`, in parameter or return position, and
-throws naming the type. `Pointer<T>` has worked since ADR-0010 only as a LOCAL: constructed via
-`Pointer<T>.fromAddress(...)`, read/written via `.value`, never passed or returned.
-
-Nothing before ADR-0038 needed it — every conformance target that used a pointer built it inside the
-function that used it. Extern FFI makes it immediately load-bearing, because most of libc takes one:
-`strlen`, `memcpy`, `write`, `read`, `fopen`, and every "out parameter" API. ADR-0038's conformance
-target routes around it by choosing three integer-only libc functions (`ffs`, `toupper`, `putchar`),
-which is enough to prove the mechanism but not enough to call an interesting C library.
-
-**Cost of the workaround:** the extern feature is real but its reach is narrow — integer-and-struct
-signatures only. `oscortex_core`'s likely first uses (an assembly helper taking a register value, an
-IDT-loading stub) fit inside that; a real C driver library would not. Extending
-`_lowerSignatureType` for `Pointer<T>` is a small, self-contained change once a target needs it;
-whoever does it should also decide whether `Pointer<Void>`/`void *` needs a spelling, which the
-prelude has no type for today.
+ADR-0080 lowers raw Pointer<T>, Volatile<T>, nested raw pointers and opaque
+Pointer<void> in parameters, results and callbacks. The regression invokes
+system libc qsort with a DCDart comparator, then tests writes, returned pointers,
+volatile reads and nested pointers. C and C++ compile the generated header.
+Opaque-pointer indexing is rejected with a source diagnostic. Managed-reference
+arrays and const/lifetime guarantees remain their own open requirements.
 
 ---
 
@@ -2450,8 +2439,8 @@ ADR-0079 permits addresses of registered external functions with validated
 signatures. The regression calls the system libc `abs` through a DCDart callback
 and returns its address for C to invoke. Managed references, including those
 nested inside callbacks, remain rejected until explicit C ownership conventions
-are specified (GAP-0057/GAP-0019). Raw pointer signatures needed for qsort remain
-tracked in GAP-0025. This entry is not proof of complete managed C interoperability.
+are specified (GAP-0057/GAP-0019). Raw pointer signatures and a real qsort regression are now implemented in
+development under GAP-0025. This entry is not proof of complete managed C interoperability.
 
 ---
 

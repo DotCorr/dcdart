@@ -100,3 +100,6 @@ is not completion when the requirement is to implement that feature.
 
 - External function addresses (GAP-0059): real libc callback regression and
   nested managed-callback rejection added; platform verification pending.
+
+- Raw/opaque pointer signatures (GAP-0025): real libc qsort regression passes
+  locally; four-host packaging and full conformance verification pending.
