@@ -1,0 +1,63 @@
+name: Verify published package managers
+on:
+  push:
+    branches: [codex/dcdart-web-playground]
+    paths: ['site/tools/check-install.py', '.github/workflows/check-install.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  homebrew:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.12.2
+      - name: Install through Homebrew and exercise the installed command
+        shell: bash
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          fi
+          brew tap dotcorr/tap
+          brew install --build-bottle dcdart
+          python3 site/tools/check-install.py "$(brew --prefix dcdart)/libexec"
+          if [ "$RUNNER_OS" = macOS ]; then
+            brew bottle --json --no-rebuild --root-url=https://github.com/DotCorr/dcdart/releases/download/v0.1.1 dcdart
+          fi
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'macOS'
+        with:
+          name: homebrew-macos-bottle
+          path: |
+            *.bottle.tar.gz
+            *.bottle.json
+  scoop:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.12.2
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Install through Scoop and exercise the installed command
+        shell: pwsh
+        run: |
+          Invoke-RestMethod https://get.scoop.sh -OutFile install-scoop.ps1
+          ./install-scoop.ps1 -RunAsAdmin
+          $env:PATH = "$env:USERPROFILE\scoop\shims;$env:PATH"
+          scoop bucket add dotcorr https://github.com/DotCorr/scoop-bucket
+          scoop install dotcorr/dcdart
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python site/tools/check-install.py (scoop prefix dcdart)
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
