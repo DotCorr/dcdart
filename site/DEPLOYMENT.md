@@ -22,4 +22,6 @@ For routine verification: `PLAYGROUND_URL=https://dcdart.dotcorr.com npm run tes
 
 ## Release documentation refresh
 
-The landing page and docs track the candidate v0.1.2, all eleven target aliases/triples, mobile SDK requirements, and actual macOS/Linux/Windows installation channels. `npm run deploy` first runs a live GitHub/Homebrew/Scoop consistency check; it refuses stale release metadata or invalid target documentation. Package-manager install/compile/link/execute checks passed on macOS, Linux, and Windows. The existing website/playground design and runtime behavior are preserved.
+The landing page and docs track v0.1.2, all eleven target aliases/triples, mobile SDK requirements, and actual macOS/Linux/Windows installation channels. `npm run deploy` first runs a live GitHub/Homebrew/Scoop consistency check; it refuses stale release metadata or invalid target documentation. Package-manager install/compile/link/execute checks passed on macOS, Linux, and Windows. The existing website/playground design and runtime behavior are preserved.
+
+The v0.1.2 hosted compiler image finished rolling out to application version 4 on 13 September 2026. A post-rollout public compilation returned compilerVersion 0.1.2, and the resulting WASM passed short-circuit and temporary-ownership probes. The temporary CI deployment credential was removed after deployment.
