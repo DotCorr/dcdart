@@ -15,6 +15,8 @@ int main(void) {
       if (localTemporary(n).payload != (n ? 43 : 97) || dc_heap_live != 0) { fprintf(stderr, "localTemporary leaks: %llu live\n", (unsigned long long)dc_heap_live); return 4; }
       if (methodTemporary(n).payload != (n ? 43 : 97) || dc_heap_live != 0) { fprintf(stderr, "methodTemporary leaks: %llu live\n", (unsigned long long)dc_heap_live); return 4; }
       if (setterTemporary(n).payload != (n ? 43 : 97) || dc_heap_live != 0) { fprintf(stderr, "setterTemporary leaks: %llu live\n", (unsigned long long)dc_heap_live); return 4; }
+      if (weakTemporary(n).payload != (n ? 43 : 97) || dc_heap_live != 0) return 5;
+      if (nestedTemporary(n).payload != (n ? 43 : 97) || dc_heap_live != 0) return 5;
       if (callOwned(n).payload != (n ? 43 : 97) || dc_heap_live != 0) return 2;
     }
   }
