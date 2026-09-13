@@ -774,6 +774,16 @@ final class PortIn extends DCInstruction {
 // asks for one and silently gets the other's guarantee.
 // ---------------------------------------------------------------------
 
+/// Strong seq_cst compare-exchange returning the observed previous value.
+/// Since this is strong, comparing that value with expected detects success.
+final class AtomicCompareExchange extends DCInstruction {
+  final DCValue dest, pointer, expected, value;
+  const AtomicCompareExchange({required this.dest, required this.pointer,
+      required this.expected, required this.value});
+  @override
+  DCValue get result => dest;
+}
+
 /// Which read-modify-write an [AtomicRmw] performs. Names match LLVM's own
 /// `atomicrmw` opcodes exactly (`add`/`sub`/`and`/`or`/`xor`/`xchg`), so the
 /// backend needs no translation table — the same choice ADR-0013 made for

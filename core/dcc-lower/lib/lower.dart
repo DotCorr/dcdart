@@ -1461,7 +1461,7 @@ class _BareFunctionLowerer {
         // with no ownership questions, so reassignment is the same
         // rebinding it has always been for ints — `acc = acc + x` in an ML
         // kernel's accumulation loop is this exact shape.
-        if (oldValue.type is! DCInt && oldValue.type is! DCFloat) {
+        if (oldValue.type is! DCInt && oldValue.type is! DCFloat && oldValue.type is! DCBool) {
           throw DccLowerError(
             '"$context": reassigning "${variable.name}" (type ${oldValue.type}) '
             'is not supported -- only scalar (u8/u32/u64/f32/f64) locals can '
@@ -1807,7 +1807,7 @@ class _BareFunctionLowerer {
       final mergeType = valuesBeforeIf[v]!.type;
       // DCFloat allowed alongside DCInt (ADR-0065): same scalar-merge
       // mechanics, the block param just carries a float type.
-      if (mergeType is! DCInt && mergeType is! DCFloat) {
+      if (mergeType is! DCInt && mergeType is! DCFloat && mergeType is! DCBool) {
         throw DccLowerError(
           '"$context": "${v.name}" (type $mergeType) is reassigned in a '
           'branch of this if/else that falls through -- only scalar '
@@ -2048,6 +2048,7 @@ class _BareFunctionLowerer {
       // every ML kernel this feature exists for.
       if (current.type is! DCInt &&
           current.type is! DCFloat &&
+          current.type is! DCBool &&
           current.type is! DCHeapPointer) {
         throw DccLowerError(
           '"$context": loop-carried variable "${v.name}" has type '
@@ -3613,6 +3614,21 @@ class _BareFunctionLowerer {
       return dest;
     }
 
+    if (name == 'compareExchange') {
+      if (args.length != 3) {
+        throw DccLowerError('"$context": Atomic.compareExchange needs pointer, expected and desired values');
+      }
+      final expected = _lowerExpression(args[1]);
+      final value = _lowerExpression(args[2]);
+      if (expected.type != elementType || value.type != elementType) {
+        throw DccLowerError('"$context": compare-exchange operand widths must match the pointer');
+      }
+      final dest = DCValue(_allocId(), elementType);
+      _addInstr(AtomicCompareExchange(dest: dest, pointer: pointer,
+          expected: expected, value: value));
+      return dest;
+    }
+
     // Names map to DC-IR's AtomicOp, which in turn carries LLVM's own opcode
     // names, so there is exactly one translation in the whole pipeline and it
     // is this table.
@@ -3628,9 +3644,7 @@ class _BareFunctionLowerer {
     if (op == null) {
       throw DccLowerError(
         '"$context": Atomic.$name is not implemented. Available: load, store, '
-        'exchange, fetchAdd, fetchSub, fetchAnd, fetchOr, fetchXor. '
-        'Compare-exchange is deliberately absent — see docs/known-gaps.md '
-        'GAP-0041.',
+        'exchange, compareExchange, fetchAdd, fetchSub, fetchAnd, fetchOr, fetchXor.',
       );
     }
     if (args.length != 2) {

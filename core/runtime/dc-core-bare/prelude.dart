@@ -733,6 +733,12 @@ class Port {
 /// final previous = Atomic.fetchAdd(p, u64(1));
 /// ```
 class Atomic {
+  /// Strong compare-exchange: replace only when memory equals expected.
+  /// Returns the observed old value; equality with expected means success.
+  /// No spurious failures. Both outcomes use sequential consistency.
+  static T compareExchange<T>(Pointer<T> address, T expected, T value) =>
+      throw UnimplementedError('dcc-lower substitutes atomic compare-exchange');
+
   /// An indivisible read. Cannot tear, cannot be duplicated, cannot be
   /// invented out of nothing by the optimizer.
   static T load<T>(Pointer<T> address) =>

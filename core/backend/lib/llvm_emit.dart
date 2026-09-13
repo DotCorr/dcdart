@@ -727,6 +727,14 @@ void _emitInstruction(DCInstruction instruction, _FunctionEmitter e, {required S
         'store atomic $type %v${instruction.value.id.index}, ptr '
         '%v${instruction.pointer.id.index} seq_cst, align $bytes',
       );
+    case AtomicCompareExchange():
+      final type = _llvmType(instruction.value.type, context: context);
+      final bytes = _atomicWidthBytes(instruction.value.type, context: context, what: 'AtomicCompareExchange');
+      _emitAtomicAlignment(instruction.pointer, bytes, e);
+      final pair = e.freshName('cas');
+      e.line('%$pair = cmpxchg ptr %v${instruction.pointer.id.index}, '
+          '$type %v${instruction.expected.id.index}, $type %v${instruction.value.id.index} seq_cst seq_cst');
+      e.line('%v${instruction.dest.id.index} = extractvalue {$type, i1} %$pair, 0');
     case AtomicRmw():
       final type = _llvmType(instruction.value.type, context: context);
       final bytes = _atomicWidthBytes(instruction.value.type, context: context, what: 'AtomicRmw');

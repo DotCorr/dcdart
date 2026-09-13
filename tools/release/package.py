@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix='dcdart-smoke-') as td:
     exe=temp/('smoke.exe' if windows else 'smoke')
     run(['clang',temp/'host.c',obj,'-o',exe]); run([exe])
 # Exercise the packaged compiler against the release's semantic regressions.
-for suite, source in [('temporary-ownership','temporary'), ('boolean','boolean'), ('propagate-ownership','propagate'), ('null-safety','valid'), ('signed-int','signed'), ('extern-address','address'), ('pointer-signature','pointer'), ('str-ffi','text'), ('numeric-convert','convert')]:
+for suite, source in [('temporary-ownership','temporary'), ('boolean','boolean'), ('propagate-ownership','propagate'), ('null-safety','valid'), ('signed-int','signed'), ('extern-address','address'), ('pointer-signature','pointer'), ('str-ffi','text'), ('numeric-convert','convert'), ('compare-exchange','cas')]:
     case = root/'core/tests/conformance'/suite
     if not case.exists(): continue
     with tempfile.TemporaryDirectory(prefix='dcdart-regression-') as td:
@@ -39,8 +39,8 @@ for suite, source in [('temporary-ownership','temporary'), ('boolean','boolean')
         obj=temp/(source+'.o')
         run([binary,'build','--mode','bare','--target','host',case/(source+'.dart'),'-o',obj,'--emit-header',temp/(source+'.h'),'--prelude',prelude])
         exe=temp/('test.exe' if windows else 'test')
-        run(['clang','-I'+str(temp),case/'main.c',obj,'-o',exe]); run([exe])
-        if suite == 'signed-int': run([sys.executable,case/'check-traps.py',exe])
+        run(['clang'] + (['-pthread'] if suite == 'compare-exchange' and not windows else []) + ['-I'+str(temp),case/'main.c',obj,'-o',exe]); run([exe])
+        if suite in ('signed-int', 'compare-exchange'): run([sys.executable,case/'check-traps.py',exe])
 run([sys.executable, root/'core/tests/conformance/shared-heap/check.py', binary])
 (stage/'provenance.json').write_text(json.dumps({'tag':tag,'commit':sha,'host':host,'dart':subprocess.check_output([dart,'--version'],text=True).strip(),'validation':'Packaged dcc compiled and linked a C host; sumTo(100) executed and returned 4950.'},indent=2)+'\n')
 archive=Path(shutil.make_archive(str(out/name),'zip' if windows else 'gztar',root_dir=out,base_dir=name))

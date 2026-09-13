@@ -118,3 +118,8 @@ is not completion when the requirement is to implement that feature.
 - Numeric conversions (GAP-0026/GAP-0063): all sized integer/float directions
   implemented with signed rounding and saturating truncation; local matrix
   passes, platform verification pending (ADR-0083).
+
+- Compare-exchange (GAP-0041): strong CAS and mutable boolean control-flow
+  fixes added with contention/alignment regressions; platform evidence pending.
+- Shared runtime freestanding verification passes locally for linked x86-64
+  and ARM64 artifacts, and rejects incomplete clients.

@@ -1620,6 +1620,10 @@ Set<int> referencedValueIds(DCInstruction instruction) {
     case AtomicStore(:final pointer, :final value):
       ref(pointer);
       ref(value);
+    case AtomicCompareExchange(:final pointer, :final expected, :final value):
+      ref(pointer);
+      ref(expected);
+      ref(value);
     case AtomicRmw(:final pointer, :final value):
       ref(pointer);
       ref(value);

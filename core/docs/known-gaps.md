@@ -1113,32 +1113,14 @@ The existing atomic suite separately verifies locking and optimization behavior.
 
 ## GAP-0041 — No compare-exchange, because DC-IR has no multi-result instruction
 
-**Domain:** dc-ir, dcc-lower, backend (M2/M3)
-**Status:** OPEN
+**Status:** IMPLEMENTED IN DEVELOPMENT — platform verification pending.
 
-`DCDART_SPEC.md` §6 lists "CAS" among the required atomics. ADR-0055 shipped `load`, `store`,
-`exchange` and five `fetch*` operations, and not compare-exchange.
-
-The reason is structural rather than effort: `cmpxchg` produces TWO values — the previous contents
-and whether the swap happened — and `dc-ir/lib/instructions.dart`'s own header states the rule it
-would break: *"Every non-terminator instruction defines at most one result — DC-IR has no
-multi-result instructions… if a future instruction genuinely needs to define more than one value,
-that's a new node shape to design then, not a `List<DCValue> results` retrofitted onto this base
-class now."* Adding one is a larger change than all of ADR-0055.
-
-Three shapes exist for whoever takes it: a genuine multi-result node (cleanest, largest blast radius
-— every switch over `DCInstruction` and `dc-elide`'s `referencedValueIds` change shape); a
-`DCStruct`-typed result plus two `ExtractField`s, which is what LLVM itself does and needs no new
-node kind at all; or two instructions sharing a pointer, which is unsound and is listed only so it is
-visibly rejected. **The `DCStruct` route is almost certainly right** and would make `Result<T,E>`'s
-existing `MakeStruct`/`ExtractField` machinery do the work.
-
-**Cost of the workaround:** a test-and-set spinlock is expressible via `Atomic.exchange` — swap 1 in,
-you hold the lock iff 0 came out — so mutual exclusion is available. What is not is any lock-free
-structure needing an ABA-safe update: a lock-free free list, a Treiber stack, or an atomic
-"increment only if below a limit". Each of those has to become a spinlock-guarded critical section,
-which is correct and slower, and in an interrupt handler a spinlock is a deadlock risk a CAS would
-not have been.
+ADR-0084 adds strong Atomic.compareExchange, returning the observed old value.
+Since failures are never spurious, equality with expected determines success.
+The backend emits one cmpxchg and extracts the previous value, preserving the
+single-result DC-IR invariant. Tests exercise all four widths, both outcomes,
+40,000 contended increments and misalignment traps. Broader ordering selection
+and memory-model work remain GAP-0044.
 
 ---
 
