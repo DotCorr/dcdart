@@ -39,7 +39,7 @@ done
 # The host and link mode go IN the summary line. GAP-0048 exists because a
 # bare "32 passed, 0 failed" was quoted for weeks without anyone knowing it had
 # been measured in a Linux container rather than on the dev host.
-echo "===== conformance: $pass passed, $fail failed, $skip skipped"' '"[host $(uname -s)/$(uname -m), link mode: $(source tests/conformance/_lib/hosted-link.sh 2>/dev/null; dc_link_mode 2>/dev/null || echo unknown)] ====="
+echo "===== conformance: $pass passed, $fail failed, $skip skipped"' '"[host $(uname -s)/$(uname -m), default link mode (individual harnesses may use libc): $(source tests/conformance/_lib/hosted-link.sh 2>/dev/null; dc_link_mode 2>/dev/null || echo unknown)] ====="
 [[ -n "$failed" ]]  && echo "  failed: $failed"
 [[ -n "$skipped" ]] && echo "  skipped (host-gated, NOT passes):$skipped"
 exit $(( fail > 0 ? 1 : 0 ))

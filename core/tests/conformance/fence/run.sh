@@ -223,6 +223,7 @@ source "$CORE_DIR/tests/conformance/_lib/hosted-link.sh"
   || { cat "$WORKDIR/hostbuild.log" >&2; fail "dcc build --target host failed"; }
 [[ -f "$WORKDIR/fence.h" ]] || fail "--emit-header produced no header"
 
+DC_HARNESS_LIBC=1
 dc_link "$WORKDIR/fence_test" "$EXAMPLE_DIR/main.c" "$WORKDIR/fence.o" \
   "$EXAMPLE_DIR/fence.dart" -I"$WORKDIR"
 

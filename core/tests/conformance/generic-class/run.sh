@@ -120,7 +120,7 @@ if command -v timeout >/dev/null 2>&1; then
 elif command -v gtimeout >/dev/null 2>&1; then
   TIMEOUT_CMD=(gtimeout 120)
 else
-  TIMEOUT_CMD=()
+  setup_error "timeout/gtimeout is required for the recursive-instantiation rejection test"
 fi
 ( cd "$EXAMPLE_DIR" && "${TIMEOUT_CMD[@]}" "${DCC_CMD[@]}" build --mode bare \
     --target bare-x86_64 recursive_reject.dart -o "$WORKDIR/reject.o" ) \
@@ -264,6 +264,7 @@ echo "  ARC counts ok: value-typed instantiations carry no retain at all, Box\$N
 # ---------------------------------------------------------------------------
 # Step 4 — BEHAVIOUR and LEAK, through the portable link helper.
 # ---------------------------------------------------------------------------
+DC_HARNESS_LIBC=1
 dc_link "$WORKDIR/generic_class_test" "$EXAMPLE_DIR/main.c" \
   "$WORKDIR/generic_class.o" "$SRC"
 echo "  link mode: $DC_LINK_MODE"

@@ -9,6 +9,8 @@ This is an inventory of the 65 recorded gap entries, plus defects reproduced dur
 - Freestanding LLVM functions carry `"no-builtins"`, preventing the reproduced buffer-zeroing loop from acquiring an undeclared libc dependency.
 - Fence tests accept either legal x86 barrier form and still verify distinct orderings, every optimization level, and the optimizer differential.
 
+Cross-platform CI also exposed test-harness defects: diagnostic C programs linked without libc, recursive tests assuming hosted heap capacity on freestanding output, and missing macOS timeout/ELF-linker prerequisites. Harnesses now state their link mode and respect the actual heap size; object symbol verification remains independent.
+
 ## Iteration rule
 
 For each open safety issue: preserve a failing source/C regression, implement the smallest semantic fix, execute it with live-object or trap assertions as appropriate, check pre/post-elision counts for ARC changes, run both freestanding target checks for backend changes, and then run the full conformance suite. Do not mark a gap resolved merely because a diagnostic was hidden. Cross-check release assets, package manifests, playground compiler, and website documentation before publishing.

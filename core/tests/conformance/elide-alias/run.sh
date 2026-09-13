@@ -172,6 +172,7 @@ echo "  ARC counts ok: the aliasing pairs survive, and stillElided is still elid
 # Step 3 — BEHAVIOUR. The half that would actually have caught this.
 # ---------------------------------------------------------------------------
 BIN="$WORKDIR/elide_alias_bin"
+DC_HARNESS_LIBC=1
 dc_link "$BIN" "$EXAMPLE_DIR/main.c" "$WORKDIR/elide_alias.o" "$SRC"
 echo "  link mode: $DC_LINK_MODE"
 

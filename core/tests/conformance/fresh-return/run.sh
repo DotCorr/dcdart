@@ -128,6 +128,7 @@ echo "  ARC counts ok: freshShape recovered (freshSpared=1), nonFreshShape refus
 # Step 3 — BEHAVIOUR and LEAK.
 # ---------------------------------------------------------------------------
 BIN="$WORKDIR/fresh_return_bin"
+DC_HARNESS_LIBC=1
 dc_link "$BIN" "$SCRIPT_DIR/main.c" "$WORKDIR/fresh_return.o" "$SRC"
 echo "  link mode: $DC_LINK_MODE"
 

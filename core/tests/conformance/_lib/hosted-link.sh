@@ -66,7 +66,15 @@ dc_link() {
   [[ -f "$main_c" ]] || fail "dc_link: missing $main_c"
   command -v clang >/dev/null 2>&1 || fail "clang not found on PATH, see docs/known-gaps.md GAP-0001"
 
-  if [[ "$DC_LINK_MODE" == "freestanding" ]]; then
+  # Some diagnostic C harnesses use printf. Keep executing the exact bare
+  # object on Linux, but link the harness to libc explicitly. The object's
+  # own undefined-symbol check has already run independently.
+  if [[ "$DC_LINK_MODE" == "freestanding" && "${DC_HARNESS_LIBC:-0}" == 1 ]]; then
+    DC_LINK_MODE="freestanding-object/hosted-harness"
+    clang -no-pie -o "$bin" "$main_c" "$bare_obj" "$@" \
+      >"$WORKDIR/link.log" 2>&1 \
+      || { cat "$WORKDIR/link.log" >&2; fail "hosted harness link failed"; }
+  elif [[ "$DC_LINK_MODE" == "freestanding" ]]; then
     cat > "$WORKDIR/_start.S" <<'ASM'
 /* Minimal freestanding entry point, harness-only. Not part of the object
  * under test, whose freestanding guarantee is checked separately by
@@ -79,7 +87,7 @@ _start:
     movl    $60, %eax      /* x86-64 Linux sys_exit */
     syscall
 ASM
-    clang -ffreestanding -fno-builtin -nostdlib -static \
+    clang -DDC_TEST_FREESTANDING=1 -ffreestanding -fno-builtin -nostdlib -static \
       -o "$bin" "$WORKDIR/_start.S" "$main_c" "$bare_obj" "$@" \
       >"$WORKDIR/link.log" 2>&1 \
       || { cat "$WORKDIR/link.log" >&2; fail "freestanding link failed (log above)"; }
