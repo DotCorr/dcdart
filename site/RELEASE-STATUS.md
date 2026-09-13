@@ -21,3 +21,10 @@ The full suite combines independent freestanding-object checks with native behav
 Homebrew core, WinGet, AUR, npm, pub.dev, crates.io and PyPI are not claimed distribution channels. The working Homebrew tap and Scoop bucket are maintained by DotCorr.
 
 `npm run check:release -- --live` verifies the public tag, native assets, target registry, CLI version, Homebrew/Scoop versions, and archive/bottle checksums before website deployment. The [language audit](../core/docs/language-audit-2026-09-13.md) records remaining safety and feature work; v0.1.2 does not claim to close every language gap.
+
+## Next-release work
+
+Atomic-alignment guards and error-propagation ownership cleanup are under validation
+in source (ADR-0075). They are not yet included in the v0.1.2 packages or hosted
+playground listed above. Source nullable-access checks were verified; foreign
+heap-pointer validation remains open.

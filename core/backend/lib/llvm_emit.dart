@@ -649,6 +649,7 @@ void _emitInstruction(DCInstruction instruction, _FunctionEmitter e, {required S
     case AtomicLoad():
       final type = _llvmType(instruction.dest.type, context: context);
       final bytes = _atomicWidthBytes(instruction.dest.type, context: context, what: 'AtomicLoad');
+      _emitAtomicAlignment(instruction.pointer, bytes, e);
       e.line(
         '%v${instruction.dest.id.index} = load atomic $type, ptr '
         '%v${instruction.pointer.id.index} seq_cst, align $bytes',
@@ -656,13 +657,15 @@ void _emitInstruction(DCInstruction instruction, _FunctionEmitter e, {required S
     case AtomicStore():
       final type = _llvmType(instruction.value.type, context: context);
       final bytes = _atomicWidthBytes(instruction.value.type, context: context, what: 'AtomicStore');
+      _emitAtomicAlignment(instruction.pointer, bytes, e);
       e.line(
         'store atomic $type %v${instruction.value.id.index}, ptr '
         '%v${instruction.pointer.id.index} seq_cst, align $bytes',
       );
     case AtomicRmw():
       final type = _llvmType(instruction.value.type, context: context);
-      _atomicWidthBytes(instruction.value.type, context: context, what: 'AtomicRmw');
+      final bytes = _atomicWidthBytes(instruction.value.type, context: context, what: 'AtomicRmw');
+      _emitAtomicAlignment(instruction.pointer, bytes, e);
       // AtomicOp's names are LLVM's own opcode names (see its doc comment),
       // so there is no mapping table here and none to drift.
       e.line(
@@ -878,6 +881,27 @@ void _emitDivRem(
   e.startBlock(okLabel);
   final op = kind == 'div' ? 'udiv' : 'urem';
   e.line('%v${dest.id.index} = $op $type %v${lhs.id.index}, %v${rhs.id.index}');
+}
+
+/// Validate raw addresses before promising LLVM natural atomic alignment.
+/// Low address bits suffice on both 32- and 64-bit targets. Splits use
+/// startBlock so subsequent phi predecessors refer to the continuation.
+void _emitAtomicAlignment(DCValue pointer, int bytes, _FunctionEmitter e) {
+  if (bytes == 1) return;
+  final address = e.freshName('atomicaddr');
+  final lowBits = e.freshName('atomiclow');
+  final aligned = e.freshName('atomicaligned');
+  final trapLabel = e.freshLabel('atomictrap');
+  final okLabel = e.freshLabel('atomicok');
+  e.line('%$address = ptrtoint ptr %v${pointer.id.index} to i64');
+  e.line('%$lowBits = and i64 %$address, ${bytes - 1}');
+  e.line('%$aligned = icmp eq i64 %$lowBits, 0');
+  e.terminate('br i1 %$aligned, label %$okLabel, label %$trapLabel');
+  e.startBlock(trapLabel);
+  declareTrapIntrinsic(e.declaredIntrinsics);
+  e.line('call void @llvm.trap()');
+  e.terminate('unreachable');
+  e.startBlock(okLabel);
 }
 
 /// `IConvert` -> `zext` / `sext` / `trunc`, chosen from the two types.

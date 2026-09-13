@@ -1009,6 +1009,29 @@ class _BareFunctionLowerer {
   // exit.
   final List<VariableDeclaration> _weakLocals = [];
 
+  // References acquired by an unfinished enclosing expression. A nested
+  // Result.propagate error exits before that expression can consume them.
+  // Stack depths preserve outer argument/receiver owners across nested calls.
+  final List<DCValue> _pendingOwners = [];
+
+  void _trackPendingOwner(Expression source, DCValue value, {bool owned = false}) {
+    if ((owned || _isFreshHeapOwnership(source)) &&
+        (value.type is DCHeapPointer || value.type is DCWeakPointer)) {
+      _pendingOwners.add(value);
+    }
+  }
+
+  void _releasePendingOwners() {
+    for (final value in _pendingOwners.reversed) {
+      if (value.type is DCWeakPointer) {
+        _addInstr(DropWeak(object: value));
+      } else {
+        _addInstr(Release(object: value));
+      }
+    }
+  }
+
+
   /// The link names of every `@extern` declaration collected at module scope
   /// (ADR-0038). A call site checks membership here rather than trusting the
   /// annotation on the resolved target alone: Kernel IR will happily resolve
@@ -3250,7 +3273,9 @@ class _BareFunctionLowerer {
         // call rather than surfacing later as a missing symbol.
         final inst = _instanceOfReceiver(
             expr.receiver, enclosing, 'the call to "${target.name.text}"');
+        final pendingDepth = _pendingOwners.length;
         final receiver = _lowerExpression(expr.receiver);
+        _trackPendingOwner(expr.receiver, receiver);
         final args = <DCValue>[receiver];
         final ownership = <bool>[false];
         final params = target.function.positionalParameters;
@@ -3275,6 +3300,7 @@ class _BareFunctionLowerer {
               throw DccLowerError('"$context": an @owned Weak argument must be fresh');
             }
           }
+          _trackPendingOwner(sources[i], arg, owned: owned);
           args.add(arg);
           ownership.add(owned && arg.type is DCHeapPointer);
         }
@@ -3297,6 +3323,7 @@ class _BareFunctionLowerer {
           // not release it. Same convention as any non-@owned heap param.
           argOwnership: ownership,
         ));
+        _pendingOwners.length = pendingDepth;
         _releaseTemporary(expr.receiver, receiver);
         for (var i = 0; i < params.length; i++) {
           if (!_hasMarkerAnnotation(params[i].annotations, '_Owned', preludeUri)) {
@@ -3841,6 +3868,7 @@ class _BareFunctionLowerer {
       );
     }
 
+    final pendingDepth = _pendingOwners.length;
     final loweredArgs = <DCValue>[];
     // (Move semantics, docs/decisions/0031-move-semantics.md) Parallel to
     // loweredArgs -- records, per argument, whether the callee fully
@@ -3890,6 +3918,7 @@ class _BareFunctionLowerer {
       // (weak-count elision is a separate, unstarted question), and
       // non-pointer types have no ARC traffic to elide in the first place.
       argOwnership.add(expectedType is DCHeapPointer && isOwnedParam);
+      _trackPendingOwner(callArgs[i], arg, owned: isOwnedParam);
       loweredArgs.add(arg);
     }
 
@@ -3899,6 +3928,7 @@ class _BareFunctionLowerer {
       args: loweredArgs,
       argOwnership: argOwnership,
     ));
+    _pendingOwners.length = pendingDepth;
     for (var i = 0; i < calleeParams.length; i++) {
       if (!_hasMarkerAnnotation(calleeParams[i].annotations, '_Owned', preludeUri)) {
         _releaseTemporary(callArgs[i], loweredArgs[i]);
@@ -4068,6 +4098,7 @@ class _BareFunctionLowerer {
       );
     }
 
+    final pendingDepth = _pendingOwners.length;
     final loweredArgs = <DCValue>[];
     final argOwnership = <bool>[];
     for (var i = 0; i < calleeParams.length; i++) {
@@ -4099,6 +4130,7 @@ class _BareFunctionLowerer {
         );
       }
       argOwnership.add(expectedType is DCHeapPointer && isOwnedParam);
+      _trackPendingOwner(callArgs[i], arg, owned: isOwnedParam);
       loweredArgs.add(arg);
     }
 
@@ -4108,6 +4140,7 @@ class _BareFunctionLowerer {
       args: loweredArgs,
       argOwnership: argOwnership,
     ));
+    _pendingOwners.length = pendingDepth;
     for (var i = 0; i < calleeParams.length; i++) {
       if (!_hasMarkerAnnotation(calleeParams[i].annotations, '_Owned', preludeUri)) {
         _releaseTemporary(callArgs[i], loweredArgs[i]);
@@ -4274,6 +4307,7 @@ class _BareFunctionLowerer {
       dest = DCValue(_allocId(), returnType);
     }
 
+    final pendingDepth = _pendingOwners.length;
     final loweredArgs = <DCValue>[];
     for (var i = 0; i < signature.params.length; i++) {
       final expected = signature.params[i];
@@ -4293,6 +4327,7 @@ class _BareFunctionLowerer {
       if (expected.owned && !_isFreshHeapOwnership(callArgs[i])) {
         _addInstr(Retain(object: arg));
       }
+      _trackPendingOwner(callArgs[i], arg, owned: expected.owned);
       loweredArgs.add(arg);
     }
 
@@ -4301,6 +4336,7 @@ class _BareFunctionLowerer {
     // checked every argument against. dc-elide therefore sees exactly the
     // ownership this lowering acted on, with no second copy to disagree.
     _addInstr(IndirectCall(dest: dest, callee: callee, args: loweredArgs));
+    _pendingOwners.length = pendingDepth;
     for (var i = 0; i < signature.params.length; i++) {
       if (!signature.params[i].owned) {
         _releaseTemporary(callArgs[i], loweredArgs[i]);
@@ -4423,6 +4459,11 @@ class _BareFunctionLowerer {
     _finishBlock();
 
     _startBlock(errBlockId, const []);
+    _releasePendingOwners();
+    // Propagation is a function exit, just like an explicit return. The
+    // Result payload is scalar, so no heap/weak binding transfers out.
+    _releaseHeapLocals(exceptDecl: null);
+    _releaseWeakLocals(exceptDecl: null);
     _addInstr(Return(value: resultValue));
     _finishBlock();
 
@@ -4495,13 +4536,7 @@ class _BareFunctionLowerer {
     // this class's concrete identity is statically known for sure --
     // Release's own codegen needs no class information at all, since
     // Alloc already wrote this into the object's cls header field.
-    _addInstr(
-      Alloc(
-        dest: dest,
-        payloadSizeBytes: payloadSize,
-        destructorName: heapLayouts.destructorNameFor(inst),
-      ),
-    );
+
 
     final ctor = expr.target;
     final ctorParams = ctor.function.positionalParameters;
@@ -4511,10 +4546,22 @@ class _BareFunctionLowerer {
         'positional params, call site gives ${expr.arguments.positional.length}',
       );
     }
+    final pendingDepth = _pendingOwners.length;
     final paramToArg = <VariableDeclaration, DCValue>{};
     for (var i = 0; i < ctorParams.length; i++) {
-      paramToArg[ctorParams[i]] = _lowerExpression(expr.arguments.positional[i]);
+      final source = expr.arguments.positional[i];
+      final value = _lowerExpression(source);
+      paramToArg[ctorParams[i]] = value;
+      _trackPendingOwner(source, value);
     }
+
+    _addInstr(
+      Alloc(
+        dest: dest,
+        payloadSizeBytes: payloadSize,
+        destructorName: heapLayouts.destructorNameFor(inst),
+      ),
+    );
 
     for (final init in ctor.initializers) {
       if (init is SuperInitializer) continue; // HeapObject's own trivial super() -- nothing to lower
@@ -4564,6 +4611,7 @@ class _BareFunctionLowerer {
       _addInstr(Store(pointer: fieldPtr, value: value));
     }
 
+    _pendingOwners.length = pendingDepth;
     // Each field retained its own reference. Drop each temporary argument
     // once, even when the constructor stores it into several fields.
     for (var i = 0; i < ctorParams.length; i++) {
@@ -4611,10 +4659,13 @@ class _BareFunctionLowerer {
         'which is a separate decision nobody has made.',
       );
     }
+    final pendingDepth = _pendingOwners.length;
     final objectPtr = _lowerExpression(expr.receiver);
+    _trackPendingOwner(expr.receiver, objectPtr);
     final fieldPtr = DCValue(_allocId(), DCPointer(field.type));
     _addInstr(PtrOffset(dest: fieldPtr, base: objectPtr, offsetBytes: field.offset));
     final value = _lowerExpression(expr.value);
+    _pendingOwners.length = pendingDepth;
     if (value.type != field.type) {
       throw DccLowerError(
         '"$context": assigning a value of type ${value.type} to '

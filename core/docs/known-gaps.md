@@ -642,29 +642,21 @@ Escalation 0007.
 
 ---
 
-## GAP-0038 — Nullable heap references have no null SAFETY; a null dereference faults at runtime
+## GAP-0038 — Nullable source checks exist; foreign heap pointers remain unchecked
 
-**Domain:** dcc-lower (M2)
-**Status:** OPEN — and it sits against `CLAUDE.md` rule 3 rather than merely being unimplemented
+**Domain:** frontend, backend
+**Status:** PARTIAL — source null safety verified; invalid foreign-pointer defense remains open
 
-ADR-0049 made `null` expressible and made `Retain`/`Release` null-safe, so a null reference can be
-stored, compared and passed around. It did **not** make dereferencing one safe: `cur.value` where
-`cur` is null reads the object at address 0 and faults.
+The 2026-09-14 regression disproved the earlier claim that discarding nullability in DC-IR
+lets an unchecked nullable access compile. The Dart frontend rejects `Node? x; x.value`
+before lowering and accepts a dereference following `if (x == null) return ...`.
+`tests/conformance/null-safety` preserves both the refusal and native execution of the
+checked path, including null passed to a nullable C ABI parameter.
 
-Dart's type system already carries the distinction — `Node` and `Node?` are different types, and
-front_end enforces it before dcc-lower ever runs. **DCDart currently discards that information.**
-`_lowerType` maps both to the same `DCHeapPointer`, so a program that would not compile as Dart is
-accepted, and a program that Dart proved safe gets no benefit from the proof.
-
-That matters more here than it would elsewhere. `CLAUDE.md` rule 3 says sound null safety is "our main
-advantage over C and C++" and forbids `!` and `late` to preserve it. Accepting a null dereference is
-the compiler failing to uphold the rule its own source is held to.
-
-**Cost of the workaround:** the programmer checks `!= null` before every dereference, and nothing
-verifies they did. The fix is to carry nullability on `DCHeapPointer` and reject a dereference of a
-nullable value that has not been narrowed — which needs flow-sensitive narrowing (`if (x != null) {
-x.f }` must know `x` is non-null inside the branch). Kernel already records the static type at each
-node, so the information is available; nothing reads it yet.
+This is not a guarantee for arbitrary C callers: a foreign caller can violate a non-null
+heap parameter's contract, and field addressing still has no explicit runtime null trap.
+Pointer validity and lifetime at that boundary remain the caller's responsibility. A
+future defense must distinguish that boundary issue from source-level flow checking.
 
 ---
 
@@ -1094,28 +1086,21 @@ mis-specified ordering — mapping `release` to `acquire` would pass the count a
 
 ---
 
-## GAP-0042 — Atomic alignment is neither checked nor representable
+## GAP-0042 — Atomic alignment was promised without checking raw addresses
 
-**Domain:** dc-ir, backend (M2, downstream: `oscortex_core`)
-**Status:** OPEN — silent undefined behaviour, no diagnostic possible today
+**Domain:** backend
+**Status:** FIXED in next-release source — regression added, ADR-0075
 
-ADR-0055's atomics emit `align N` equal to the operand width, which is what LLVM requires. Nothing
-verifies the pointer actually satisfies it, and nothing can: `DCPointer` carries no alignment, and
-`Pointer<T>.fromAddress` takes an arbitrary `u64`.
+Every atomic load, store, exchange, and fetch operation now checks natural alignment
+before issuing the LLVM atomic instruction. Misaligned u16/u32/u64 addresses deliberately
+trap; u8 has no alignment restriction. The guard uses the same block-splitting machinery
+as arithmetic traps, preserving later phi predecessors. Raw pointer types still do not
+encode alignment, so this is a runtime guarantee rather than a static alignment proof.
 
-An under-aligned atomic is undefined at the hardware level, not merely slow. A `lock` operation
-spanning a cache-line boundary is not atomic on some x86 parts and raises `#AC` on others when
-alignment checking is enabled — and split-lock detection, which modern kernels enable, turns it into
-a fault. The failure is a machine-check-shaped event a long way from the source line that caused it.
-
-Every caller in-tree is safe today by construction: a `@bss` block declares `align` explicitly
-(ADR-0051), and the example addresses are `base + index * 8`. That is safety by inspection of four
-call sites, which does not survive the fifth.
-
-**Cost of the workaround:** the guarantee lives in the programmer's head. The fix is the same
-information GAP-0034 wants and GAP-0051 wants — an alignment on the pointer TYPE, so
-`Pointer<u64>.elementAt(n)` derives both stride and alignment in one place. Worth solving with those
-rather than bolting an `assert` onto `Atomic.*`.
+`tests/conformance/atomic-alignment` exercises every operation and width, every invalid
+low-bit offset, aligned success, and both freestanding object targets. A test expecting
+a deliberate trap failed before the fix (`load16` at offset 1 returned normally).
+The existing atomic suite separately verifies locking and optimization behavior.
 
 ---
 
@@ -3115,3 +3100,20 @@ per-case `dc_heap_live == 0` assert caught it as exactly one leaked Tensor per V
 locals first; nothing diagnoses the direct form, so each new author pays one leak-hunt.
 Needs a conformance target with the pair above (leak check + DC-IR release-count assertion)
 alongside the fix.
+
+
+## GAP-0076 — Error propagation skipped owned locals and unfinished-expression owners
+
+**Domain:** dcc-lower, ARC
+**Status:** FIXED in next-release source — regression added, ADR-0075
+
+`Result.propagate()` emitted a direct error return without the cleanup used by an
+explicit return. It now releases heap/weak locals and owned parameters on the error
+path. Enclosing expressions track acquired argument/receiver references until their
+consumer executes; an early error releases those too, including retains acquired for
+an `@owned` argument whose call has not happened yet. Constructor allocation occurs
+after argument evaluation, avoiding destruction of a partially initialized object.
+
+`tests/conformance/propagate-ownership` checks 3,000 iterations of success/error paths
+through direct/local/indirect calls, constructors, methods and field assignment, with
+zero live objects after each call. Raw/elided ARC counts retain both exit cleanups.
