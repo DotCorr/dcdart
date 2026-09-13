@@ -13,6 +13,7 @@ class Pair extends HeapObject {
   final Inner a;
   final Inner b;
   Pair(Inner value): a = value, b = value;
+  Inner child() => a;
 }
 @bare u64 shared(u64 n) { final p = Pair(makeInner(n)); return p.a.value + p.b.value; }
 @bare Inner escaped(u64 n) => Outer(Inner(n)).inner;
@@ -40,3 +41,8 @@ class Reader extends HeapObject {
 
 @bare void discardIndirect(u64 n) { final fn = makeInner; fn(n); }
 @bare u64 freshNull(u64 n) { if (makeInner(n) != null) return u64(1); return u64(0); }
+
+@bare Inner identity(Inner x) => x;
+@bare Inner localParent(u64 n) { final p = Outer(Inner(n)); return p.inner; }
+@bare u64 borrowedResult(u64 n) { final x = identity(Inner(n)); return x.value; }
+@bare u64 methodChild(u64 n) { final p = Pair(Inner(n)); final x = p.child(); return x.value; }

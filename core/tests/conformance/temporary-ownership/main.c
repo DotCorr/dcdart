@@ -15,6 +15,8 @@ int main(void) {
     CHECK(methodFresh(n) == n); CHECK(methodBorrow(n) == n);
     CHECK(methodOwned(n) == n * 2); CHECK(methodOwnedFresh(n) == n);
     discardIndirect(n); CHECK(dc_heap_live == 0); CHECK(freshNull(n) == 1);
+    CHECK(borrowedResult(n) == n); CHECK(methodChild(n) == n);
+    dropInner(localParent(n)); CHECK(dc_heap_live == 0);
   }
   puts("TEMPORARY: PASS");
 }

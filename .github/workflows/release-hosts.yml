@@ -2,7 +2,7 @@ name: Build and verify release candidate
 on:
   push:
     branches: [codex/dcdart-web-playground]
-    paths: ['tools/release/**', 'core/scripts/vendor-frontend.sh', '.github/workflows/release-hosts.yml']
+    paths: ['tools/release/**', 'core/**', '.github/workflows/release-hosts.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -35,6 +35,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang-18 lld-18
           echo /usr/lib/llvm-18/bin >> "$GITHUB_PATH"
+      - name: Select LLVM on macOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install llvm
+          echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
+          echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> "$GITHUB_ENV"
       - name: Restore pinned frontend
         shell: bash
         run: |
@@ -42,6 +49,17 @@ jobs:
           bash release-src/core/scripts/vendor-frontend.sh
       - name: Build packaged compiler and execute native smoke test
         run: python tools/release/package.py release-src dist
+      - name: Run compiler conformance and optimizer tests
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: release-src
+        run: |
+          for package in dc-objdump dc-elide backend; do
+            (cd core/$package && dart pub get)
+          done
+          bash core/tests/run-conformance.sh
+          (cd core/dc-elide && dart test)
+          (cd core/backend && dart test)
       - uses: actions/upload-artifact@v4
         with:
           name: dcdart-${{ matrix.os }}

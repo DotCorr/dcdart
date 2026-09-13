@@ -4,7 +4,7 @@ This is an inventory of the 65 recorded gap entries, plus defects reproduced dur
 
 ## Release fixes
 
-- Temporary ownership: constructor arguments, borrowed direct/local/indirect/method arguments, fresh field/method receivers, weak construction/load receivers, null comparisons, and discarded indirect-call results. Method parameters now honor `@owned` at the call site.
+- Temporary ownership: constructor arguments, borrowed direct/local/indirect/method arguments, fresh field/method receivers, weak construction/load receivers, null comparisons, and discarded indirect-call results. Method parameters now honor `@owned` at the call site. Returning a borrowed object or field acquires ownership before local cleanup; borrowed weak returns are refused safely.
 - Boolean literals, general `!`, and genuinely short-circuiting `&&` / `||`. This does not add a boolean C ABI.
 - Freestanding LLVM functions carry `"no-builtins"`, preventing the reproduced buffer-zeroing loop from acquiring an undeclared libc dependency.
 - Fence tests accept either legal x86 barrier form and still verify distinct orderings, every optimization level, and the optimizer differential.

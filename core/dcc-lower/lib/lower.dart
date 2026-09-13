@@ -2285,6 +2285,18 @@ class _BareFunctionLowerer {
     // either DCHeapPointer- or DCWeakPointer-typed, never both), so
     // identity comparison against either list is safe with no extra check.
     final exceptDecl = expr is VariableGet ? expr.variable : null;
+    // Every returned heap reference transfers +1, including a borrowed
+    // parameter, `this`, or a field. Acquire it before local destruction.
+    if (value.type is DCHeapPointer &&
+        !_isFreshHeapOwnership(expr) && !_heapLocals.contains(exceptDecl)) {
+      _addInstr(Retain(object: value));
+    }
+    if (value.type is DCWeakPointer &&
+        !_isFreshHeapOwnership(expr) && !_weakLocals.contains(exceptDecl)) {
+      throw DccLowerError('"$context": returning a borrowed Weak reference '
+          'requires weak-to-weak retain, which is not implemented; return '
+          'a fresh Weak.fromStrong reference or an owned local');
+    }
     _releaseHeapLocals(exceptDecl: exceptDecl);
     _releaseWeakLocals(exceptDecl: exceptDecl);
     _addInstr(Return(value: value));
