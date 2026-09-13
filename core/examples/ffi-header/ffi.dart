@@ -62,20 +62,9 @@ u16 ffiMaskU16(u16 a, u16 b) => (a & b) | (a ^ b);
 
 /// u8 in / u8 out -- proves IntWidth.w8 -> uint8_t.
 ///
-/// NARROW-RETURN CAVEAT, stated here rather than hidden in the harness: the
-/// backend keeps u8/u16 values in 32-bit registers and does NOT truncate to
-/// the declared width on return (disassembly of this very function on
-/// macos-arm64: `lsl w8, w0, w8` then `ret`, with no `and w0, w0, #0xff`).
-/// So a shift that overflows 8 bits returns a register whose upper bits are
-/// set, while the generated -- and correct -- `uint8_t` prototype tells the
-/// caller the callee already extended it, which is what both AAPCS64/Apple
-/// arm64 and SysV x86-64 require of a narrow return. main.c therefore
-/// exercises this only with shift amounts whose mathematical result fits in
-/// 8 bits. That is a real backend defect, NOT a header-emission one (the
-/// header's uint8_t is the honest spelling; the object file is the side
-/// that is wrong), and it is out of this unit's editable scope -- fixing it
-/// means touching core/backend's shared lowering. Reported, not papered
-/// over: the harness does not assert the buggy value as if it were correct.
+/// Includes shifts that overflow the storage width. The result is narrowed
+/// before crossing the C boundary, including the ABI extension required by
+/// Apple ARM64 and SysV x86-64 (ADR-0077).
 @bare
 u8 ffiShiftU8(u8 a, u8 shift) => a << shift;
 
@@ -124,14 +113,9 @@ u64 ffiConstant() => u64(2718281828);
 /// proven to be a property of the emitter's empty-parameter path and not an
 /// accident of this one declaration's return type.
 ///
-/// 127 and not, say, 200, for the narrow-return reason spelled out on
-/// ffiShiftU8 above -- and here it bites even without any arithmetic. A u8
-/// literal is materialized as a SIGN-extended i8 in a 32-bit register
-/// (`u8(200)` compiles to `mov w0, #-0x38` on macos-arm64, i.e. 0xFFFFFFC8)
-/// and is returned without being narrowed, so a C caller reading the
-/// generated -- and correct -- `uint8_t` prototype gets 0xFFFFFFC8 back
-/// instead of 200. Any u8 >= 0x80 or u16 >= 0x8000 originating inside
-/// DCDart hits this. Backend defect, not a header defect; out of this
-/// unit's editable scope; reported rather than asserted-as-correct.
+/// High-bit literals also exercise the ABI zero-extension requirement.
 @bare
-u8 ffiConstantU8() => u8(127);
+u8 ffiConstantU8() => u8(200);
+
+@bare
+u16 ffiConstantU16() => u16(50000);

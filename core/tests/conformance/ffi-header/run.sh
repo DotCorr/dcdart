@@ -218,14 +218,6 @@ fi
 # ---------------------------------------------------------------------------
 # Step 5 -- PASS.
 # ---------------------------------------------------------------------------
-# Stated in the output, not buried in a comment: this target does NOT cover
-# narrow-width values that ORIGINATE inside DCDart. The backend keeps u8/u16
-# in 32-bit registers and neither masks an overflowing result nor
-# zero-extends a materialized literal (`u8(200)` -> `mov w0, #-0x38`), so a
-# C caller using the correctly-generated uint8_t prototype would read
-# 0xFFFFFFC8. That is a backend defect, not a header one, and it is out of
-# this target's scope to assert around -- said out loud so nobody reads this
-# PASS as covering it.
-echo "FFI-HEADER: note -- u8/u16 values originating inside DCDart (literals >= 0x80, overflowing shifts) are returned un-narrowed by the backend; this target's narrow-width checks stay inside the range where the object file matches its own generated prototype. Backend defect, reported separately."
-echo "FFI-HEADER: PASS -- dcc --emit-header wrote a header from DC-IR -> uint64_t/uint32_t/uint16_t/uint8_t prototypes, mixed-width params, by-value Result struct typedef (tag/payload) and three Result-returning prototypes, zero-arg functions in (void) form and no '()' form anywhere -> main.c compiled against the generated header with zero hand-written externs (-Werror) -> linked with hosted clang -> real execution, all 21 value checks correct"
+# High-bit literals and overflowing shifts now exercise ABI extension too.
+echo "FFI-HEADER: PASS -- dcc --emit-header wrote a header from DC-IR -> uint64_t/uint32_t/uint16_t/uint8_t prototypes, mixed-width params, by-value Result struct typedef (tag/payload) and three Result-returning prototypes, zero-arg functions in (void) form and no '()' form anywhere -> main.c compiled against the generated header with zero hand-written externs (-Werror) -> linked with hosted clang -> real execution, all 24 value checks correct"
 exit 0

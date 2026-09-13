@@ -55,14 +55,7 @@ int main(void) {
         if (widened != 0xFFFFULL) return 9;
     }
 
-    /* ---- u8 in / u8 out ----------------------------------------------
-     * Shift amounts are chosen so the mathematical result FITS in 8 bits.
-     * That is deliberate and is not a weakened assertion: the backend does
-     * not truncate a u8 value to 8 bits on return (see the caveat on
-     * ffiShiftU8 in ffi.dart -- `lsl w8, w0, w8; ret`, no masking), so an
-     * overflowing shift would be testing that known backend defect, not
-     * the header emitter this target exists to verify. The values below
-     * still populate all 8 bits, including the top one. */
+    /* ---- u8 in / u8 out, including high bits and overflowing shifts ---- */
     if (ffiShiftU8(0x0Fu, 2u) != (uint8_t)0x3Cu) return 10;   /* 0x0F<<2 */
     if (ffiShiftU8(0x7Fu, 1u) != (uint8_t)0xFEu) return 11;   /* top bit set;
                                                                * an int8_t
@@ -113,11 +106,10 @@ int main(void) {
      * C accepts this call site either way -- so it is checked textually by
      * the harness's step 2 instead. */
     if (ffiConstant() != 2718281828ULL) return 20;
-    /* 127, not 200: see ffiConstantU8's comment in ffi.dart -- a u8 literal
-     * >= 0x80 is returned sign-extended by the current backend, which is a
-     * backend defect this target reports rather than a header one it can
-     * assert around. */
-    if (ffiConstantU8() != (uint8_t)127u) return 21;
+    if (ffiConstantU8() != (uint8_t)200u) return 21;
+    if (ffiConstantU16() != (uint16_t)50000u) return 22;
+    if (ffiShiftU8(200u, 1u) != (uint8_t)144u) return 23;
+    if (ffiShiftU8(255u, 7u) != (uint8_t)128u) return 24;
 
     return 0;
 }
