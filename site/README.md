@@ -16,7 +16,7 @@ npm run dev -- --port 8799
 Browser tests start their own Cloudflare development server on port 8799. Against a deployment:
 
 ```sh
-PLAYGROUND_URL=https://dcdart.pages.dev npm run test:browser
+PLAYGROUND_URL=https://dcdart.dotcorr.com npm run test:browser
 ```
 
 ## Rebuild the actual runtime
@@ -51,6 +51,6 @@ npx wrangler pages project create dcdart --production-branch main --force # firs
 npm run deploy
 ```
 
-Cloudflare Pages is used because `dotcorr.com` has external Hostnet DNS. The custom subdomain must be added to the Pages project **and** its Hostnet DNS record must be `CNAME dcdart → dcdart.pages.dev`. Do not move the domain’s nameservers or modify unrelated records.
+The site uses Cloudflare Pages, and `dotcorr.com` is now managed by Cloudflare DNS. The custom domain is attached to the Pages project with a proxied `CNAME dcdart → dcdart.pages.dev`. Preserve the existing apex, wildcard, mail, and other subdomain records.
 
 See `RELEASE-STATUS.md` for checked distribution availability and `DEPLOYMENT.md` for the live deployment/domain state.

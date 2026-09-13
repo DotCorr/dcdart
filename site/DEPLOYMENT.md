@@ -1,13 +1,15 @@
 # Deployment status — 13 September 2026
 
-- Live production URL: https://dcdart.pages.dev
+- Production URL: https://dcdart.dotcorr.com
+- Pages fallback: https://dcdart.pages.dev
 - Cloudflare Pages project: `dcdart`, production branch `main`, direct upload through Wrangler.
-- Requested domain: `dcdart.dotcorr.com`, added to the Pages project; awaiting external DNS validation.
-- Authoritative DNS: Hostnet (`ns01.hostnet.nl`, `ns02.hostnet.nl`). The saved Cloudflare account has no `dotcorr.com` zone; moving nameservers is neither necessary nor part of this change.
-- Required Hostnet record: `CNAME`, name `dcdart`, value `dcdart.pages.dev`. If an explicit A/AAAA/CNAME record already exists for that exact name, replace only that record. Do not change apex, wildcard, mail, or other subdomain records.
-- Current DNS resolves `dcdart.dotcorr.com` to `216.239.34.21`, not Cloudflare Pages. No authenticated Hostnet browser session is available. Domain activation is not complete.
-- After the DNS change, verify the Pages custom domain becomes active, then run `PLAYGROUND_URL=https://dcdart.dotcorr.com npm run test:browser`.
+- Authoritative DNS: Cloudflare (`apollo.ns.cloudflare.com`, `elisabeth.ns.cloudflare.com`). The domain owner moved the zone from Hostnet; Cloudflare reports the zone active.
+- Custom domain attached to Pages. Cloudflare DNS has a proxied `CNAME dcdart → dcdart.pages.dev`, TTL Auto. Existing apex, wildcard, mail, and unrelated subdomain records were preserved.
+- HTTPS returns 200 with certificate verification enabled at Cloudflare's authoritative address. DNS verification is active; Pages certificate validation was still pending in the API at the latest check, although verified HTTPS already works.
+- DNS propagation caveat: the local recursive resolver still cached the old `216.239.34.21` address during validation. Public/authoritative DNS returned Cloudflare. Custom-domain tests therefore mapped only this hostname to its verified Cloudflare address, with normal TLS verification retained. No permanent local DNS override was installed.
 
 The checked-in Wrangler configuration deploys only `public/`. Native artifacts and historical captured outputs are not substituted for real execution. No production backend or billable compute is used by the playground.
 
-Validation: 11 runtime test groups passed (including thousands of numerical and ARC assertions); all 7 Chromium browser flows passed locally and against https://dcdart.pages.dev, including mobile layout, runtime errors, timeouts, corrupted binaries and response headers.
+Validation: 11 runtime test groups passed (including thousands of numerical and ARC assertions); all 7 Chromium browser checks passed locally and against https://dcdart.pages.dev. The same 7 checks passed on https://dcdart.dotcorr.com using the temporary DNS mapping described above, including mobile layout, runtime errors, timeouts, corrupted binaries and response headers. The request-header check was rerun after applying the same DNS mapping to Node's resolver.
+
+For routine verification after DNS propagation: `PLAYGROUND_URL=https://dcdart.dotcorr.com npm run test:browser` from `site/`.
