@@ -1110,27 +1110,13 @@ void _emitFloatConvert(FConvert instruction, _FunctionEmitter e, String context)
     return;
   }
   if (srcType is DCInt && dstType is DCFloat) {
-    // Signed sources would need `sitofp`; rejected rather than emitted
-    // wrong, same forward-looking refusal as _emitDivRem's signed case.
-    if (srcType.signed) {
-      throw BackendError(
-        '"$context": signed int -> float conversion is not implemented '
-        '(needs sitofp; no signed sized-int type has prelude support, '
-        'GAP-0024\'s reasoning)',
-      );
-    }
-    e.line('%v${instruction.dest.id.index} = uitofp $src %v${instruction.source.id.index} to $dst');
+    final op = srcType.signed ? 'sitofp' : 'uitofp';
+    e.line('%v${instruction.dest.id.index} = $op $src %v${instruction.source.id.index} to $dst');
     return;
   }
   if (srcType is DCFloat && dstType is DCInt) {
-    if (dstType.signed) {
-      throw BackendError(
-        '"$context": float -> signed int conversion is not implemented '
-        '(needs llvm.fptosi.sat; no signed sized-int type has prelude '
-        'support, GAP-0024\'s reasoning)',
-      );
-    }
-    final intrinsicName = 'llvm.fptoui.sat.$dst.$src';
+    final kind = dstType.signed ? 'fptosi' : 'fptoui';
+    final intrinsicName = 'llvm.$kind.sat.$dst.$src';
     declareFpToUiSatIntrinsic(e.declaredIntrinsics, intrinsicName, dst, src);
     e.line(
       '%v${instruction.dest.id.index} = call $dst @$intrinsicName($src %v${instruction.source.id.index})',

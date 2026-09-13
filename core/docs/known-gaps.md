@@ -2906,6 +2906,13 @@ walls it was opened for are closed.
 
 ## GAP-0063 — floating point landed (ADR-0065) minus five things, each deliberate, one with a workaround already in use
 
+**Development update (ADR-0083):** all signed/unsigned sized integer and float
+conversion directions are implemented. Signed conversion uses sitofp and
+fptosi.sat, and source tests cover fractions, extrema, infinities and NaN.
+Platform verification is pending; remaining floating-point requirements below
+are not closed by this conversion work.
+
+
 **Filed:** 2026-08-27, the same unit of work as ADR-0065 — recorded now so the next float user
 (NEON's kernels) finds the walls before hitting them.
 

@@ -114,3 +114,7 @@ is not completion when the requirement is to implement that feature.
 
 - Shared heap CLI integration: source and packaged-compiler regressions added.
   Local source tests pass; full platform evidence remains pending.
+
+- Numeric conversions (GAP-0026/GAP-0063): all sized integer/float directions
+  implemented with signed rounding and saturating truncation; local matrix
+  passes, platform verification pending (ADR-0083).

@@ -2811,6 +2811,12 @@ class _BareFunctionLowerer {
               'toF64' => DCFloat.f64, // f32 -> f64: fpext, exact
               // Truncate toward zero, saturating (llvm.fptoui.sat) — see
               // the prelude's toU64trunc doc for the exact contract.
+              'toU8trunc' => DCInt.u8,
+              'toU16trunc' => DCInt.u16,
+              'toI8trunc' => DCInt.i8,
+              'toI16trunc' => DCInt.i16,
+              'toI32trunc' => DCInt.i32,
+              'toI64trunc' => DCInt.i64,
               'toU32trunc' => DCInt.u32,
               'toU64trunc' => DCInt.u64,
               _ => null,

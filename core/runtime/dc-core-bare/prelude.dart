@@ -181,8 +181,8 @@ extension type const u64(int _value) {
 
   /// Explicit int -> float conversion (ADR-0065). Lowers to `FConvert`
   /// (`uitofp`): rounds to nearest even, which is only observable above
-  /// 2^53 where u64 outgrows f64's 53-bit significand. u64 gets `toF64`
-  /// and u32 gets `toF32` — the pairing each width can carry with at most
+  /// 2^53 where u64 outgrows f64's 53-bit significand. Originally u64 got `toF64`
+  /// and u32 got `toF32` — the pairing each width can carry with at most
   /// that one documented rounding step; the full 4x2 conversion matrix is
   /// deliberately absent until something needs it (same discipline as
   /// every other prelude member).
@@ -191,6 +191,8 @@ extension type const u64(int _value) {
   i16 toI16() => i16(_value);
   i32 toI32() => i32(_value);
   i64 toI64() => i64(_value);
+  f32 toF32() => f32(_value.toDouble());
+
 }
 
 /// u32 (DCDART_SPEC.md §4.1). Added for M1's `Pointer<u32>` exit criterion
@@ -256,13 +258,14 @@ extension type const u32(int _value) {
   /// Explicit int -> float conversion (ADR-0065). Lowers to `FConvert`
   /// (`uitofp`). NOT exact for every u32: f32's 24-bit significand cannot
   /// hold all 32 bits, so values above 2^24 round to nearest even — stated
-  /// here rather than discovered. See u64.toF64 for why only this one
-  /// pairing exists per width.
+  /// here rather than discovered. ADR-0083 supports both float widths.
   f32 toF32() => f32(_value.toDouble());
   i8 toI8() => i8(_value);
   i16 toI16() => i16(_value);
   i32 toI32() => i32(_value);
   i64 toI64() => i64(_value);
+  f64 toF64() => f64(_value.toDouble());
+
 }
 
 /// u8 (DCDART_SPEC.md §4.1). Added for M1's `@packed` struct exit criterion
@@ -328,6 +331,9 @@ extension type const u8(int _value) {
   i16 toI16() => i16(_value);
   i32 toI32() => i32(_value);
   i64 toI64() => i64(_value);
+  f32 toF32() => f32(_value.toDouble());
+  f64 toF64() => f64(_value.toDouble());
+
 }
 
 /// u16 (DCDART_SPEC.md §4.1). Added for `Port.outb`/`Port.inb` below
@@ -397,6 +403,9 @@ extension type const u16(int _value) {
   i16 toI16() => i16(_value);
   i32 toI32() => i32(_value);
   i64 toI64() => i64(_value);
+  f32 toF32() => f32(_value.toDouble());
+  f64 toF64() => f64(_value.toDouble());
+
 }
 
 /// f64 (DCDART_SPEC.md §4.1, ADR-0065): IEEE-754 binary64. Added for
@@ -458,6 +467,15 @@ extension type const f64(double _value) {
   /// site; a future `.toU64round()` would be a different operation, not a
   /// replacement.
   u64 toU64trunc() => u64(_value.truncate());
+  /// Integer conversions truncate toward zero and saturate; NaN becomes zero.
+  i8 toI8trunc() => i8(_value.truncate());
+  i16 toI16trunc() => i16(_value.truncate());
+  i32 toI32trunc() => i32(_value.truncate());
+  i64 toI64trunc() => i64(_value.truncate());
+  u8 toU8trunc() => u8(_value.truncate());
+  u16 toU16trunc() => u16(_value.truncate());
+  u32 toU32trunc() => u32(_value.truncate());
+
 }
 
 /// f32 (DCDART_SPEC.md §4.1, ADR-0065): IEEE-754 binary32 — the type ML
@@ -494,6 +512,15 @@ extension type const f32(double _value) {
   /// f64.toU64trunc — identical contract at u32's range (above u32's max
   /// yields u32's max, negative/NaN yield 0).
   u32 toU32trunc() => u32(_value.truncate());
+  /// Integer conversions truncate toward zero and saturate; NaN becomes zero.
+  i8 toI8trunc() => i8(_value.truncate());
+  i16 toI16trunc() => i16(_value.truncate());
+  i32 toI32trunc() => i32(_value.truncate());
+  i64 toI64trunc() => i64(_value.truncate());
+  u8 toU8trunc() => u8(_value.truncate());
+  u16 toU16trunc() => u16(_value.truncate());
+  u64 toU64trunc() => u64(_value.truncate());
+
 }
 
 /// Marks a top-level `final` field for emission into read-only static data
@@ -1187,6 +1214,9 @@ extension type const i8(int _value) {
   u16 toU16() => u16(_value);
   u32 toU32() => u32(_value);
   u64 toU64() => u64(_value);
+  f32 toF32() => f32(_value.toDouble());
+  f64 toF64() => f64(_value.toDouble());
+
 }
 
 extension type const i16(int _value) {
@@ -1213,6 +1243,9 @@ extension type const i16(int _value) {
   u16 toU16() => u16(_value);
   u32 toU32() => u32(_value);
   u64 toU64() => u64(_value);
+  f32 toF32() => f32(_value.toDouble());
+  f64 toF64() => f64(_value.toDouble());
+
 }
 
 extension type const i32(int _value) {
@@ -1239,6 +1272,9 @@ extension type const i32(int _value) {
   u16 toU16() => u16(_value);
   u32 toU32() => u32(_value);
   u64 toU64() => u64(_value);
+  f32 toF32() => f32(_value.toDouble());
+  f64 toF64() => f64(_value.toDouble());
+
 }
 
 extension type const i64(int _value) {
@@ -1265,4 +1301,7 @@ extension type const i64(int _value) {
   u16 toU16() => u16(_value);
   u32 toU32() => u32(_value);
   u64 toU64() => u64(_value);
+  f32 toF32() => f32(_value.toDouble());
+  f64 toF64() => f64(_value.toDouble());
+
 }
