@@ -17,42 +17,35 @@
 // libc. That is the point of keeping it separate from `extern_calls.dart`,
 // which does, and which is the configuration oscortex_core needs.
 //
-// SIGNEDNESS, stated rather than glossed: every function below is `int`-typed
-// in C, and DCDart has no signed sized-integer type yet (spec §4.1 lists
-// `i8`..`i64` but the prelude implements only the unsigned half). `u32` and
-// C's `int` are the same 32-bit register operand on both SysV-AMD64 and
-// AAPCS64 — they differ only in how the VALUE is interpreted — so every call
-// here is ABI-correct, and every value used is inside 0..2^31-1 where the two
-// interpretations agree. A signed sized-int type is tracked in
-// docs/known-gaps.md, not papered over here.
+// C int signatures use i32, including negative values through callbacks.
 import '../../runtime/dc-core-bare/prelude.dart';
 
 /// `int ffs(int)` — index of the least-significant set bit, 1-based, 0 for 0.
 /// POSIX; present in glibc and in macOS's libSystem. Chosen because its
 /// answers are exactly known and non-obvious: ffs(40) == 4, not 40.
 @extern
-external u32 ffs(u32 mask);
+external i32 ffs(i32 mask);
 
 /// `int toupper(int)` — C89, everywhere. Chosen as a second, independent
 /// libc symbol with a completely different implementation, so a single
 /// misbehaving symbol cannot be mistaken for the mechanism working.
 @extern
-external u32 toupper(u32 c);
+external i32 toupper(i32 c);
 
 /// `int putchar(int)` — C89. Not a value check: an OBSERVABLE SIDE EFFECT
 /// outside this process's memory. The harness captures stdout and compares
 /// the bytes, so this proves the call really reached libc rather than being
 /// constant-folded into a plausible-looking return value.
 @extern
-external u32 putchar(u32 c);
+external i32 putchar(i32 c);
 
 /// `ffs` through DCDart.
 @bare
-u32 lowestSetBit(u32 mask) => ffs(mask);
+i32 lowestSetBit(i32 mask) => ffs(mask);
 
 /// `toupper` through DCDart.
 @bare
-u32 upper(u32 c) => toupper(c);
+i32 upper(i32 c) => toupper(c);
 
 /// Writes "DCDART\n" to stdout one byte at a time through real `putchar`,
 /// then returns the number of bytes written. Each `putchar(...)` here is a
@@ -60,14 +53,14 @@ u32 upper(u32 c) => toupper(c);
 /// is refused (ADR-0038: discarding could leak under the naive release
 /// policy, so there is one rule rather than two).
 @bare
-u32 shout() {
-  final a = putchar(u32(68)); // 'D'
-  final b = putchar(u32(67)); // 'C'
-  final c = putchar(u32(68)); // 'D'
-  final d = putchar(u32(65)); // 'A'
-  final e = putchar(u32(82)); // 'R'
-  final f = putchar(u32(84)); // 'T'
-  final g = putchar(u32(10)); // '\n'
+i32 shout() {
+  final a = putchar(i32(68)); // 'D'
+  final b = putchar(i32(67)); // 'C'
+  final c = putchar(i32(68)); // 'D'
+  final d = putchar(i32(65)); // 'A'
+  final e = putchar(i32(82)); // 'R'
+  final f = putchar(i32(84)); // 'T'
+  final g = putchar(i32(10)); // '\n'
   // Sum the echoed characters back: putchar returns the character written,
   // so this also checks the RETURN path of every one of those seven calls,
   // not just that they happened.
@@ -77,12 +70,26 @@ u32 shout() {
 /// A libc call inside a `while` loop, accumulating a real computed answer:
 /// the sum of ffs(i) for i in 1..upTo.
 @bare
-u32 sumLowestSetBits(u32 upTo) {
-  var i = u32(0);
-  var total = u32(0);
+i32 sumLowestSetBits(i32 upTo) {
+  var i = i32(0);
+  var total = i32(0);
   while (i < upTo) {
-    i = i + u32(1);
+    i = i + i32(1);
     total = total + ffs(i);
   }
   return total;
 }
+
+/// Pass a real external symbol through a DCDart callback parameter.
+@bare
+i32 applyC(i32 Function(i32) fn, i32 value) => fn(value);
+
+@extern
+external i32 abs(i32 value);
+
+@bare
+i32 indirectAbs(i32 value) => applyC(abs, value);
+
+/// Return the external address to C, which calls it independently.
+@bare
+i32 Function(i32) absAddress() => abs;

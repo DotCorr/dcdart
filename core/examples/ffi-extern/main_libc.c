@@ -13,25 +13,30 @@
 #include <stdint.h>
 #include <stdio.h>
 
-extern uint32_t lowestSetBit(uint32_t mask);
-extern uint32_t upper(uint32_t c);
-extern uint32_t shout(void);
-extern uint32_t sumLowestSetBits(uint32_t upTo);
+extern int32_t lowestSetBit(int32_t mask);
+extern int32_t upper(int32_t c);
+extern int32_t shout(void);
+extern int32_t sumLowestSetBits(int32_t upTo);
+
+extern int32_t indirectAbs(int32_t value);
+extern int32_t (*absAddress(void))(int32_t);
 
 int main(void) {
+    if (indirectAbs(-123) != 123 || indirectAbs(0) != 0) return 5;
+    if (absAddress()(-47) != 47) return 6;
     /* 1 -- ffs, hand-derived. ffs returns a 1-BASED bit index, 0 for zero.
      *   0      -> 0
      *   1      -> 1   (bit 0)
      *   40     -> 4   (40 = 0b101000, lowest set bit is bit 3)
      *   1024   -> 11  (bit 10)
      *   96     -> 6   (96 = 0b1100000, lowest set bit is bit 5)
-     *   0x80000000 is avoided: it is negative as a C int (see the
-     *   signedness note in libc_calls.dart). */
+     *   INT32_MIN -> 32 (only the highest bit is set). */
     if (lowestSetBit(0) != 0) return 1;
     if (lowestSetBit(1) != 1) return 1;
     if (lowestSetBit(40) != 4) return 1;
     if (lowestSetBit(1024) != 11) return 1;
     if (lowestSetBit(96) != 6) return 1;
+    if (lowestSetBit(INT32_MIN) != 32) return 1;
 
     /* 2 -- toupper. Letters change, everything else passes through. */
     if (upper('a') != 'A') return 2;

@@ -97,3 +97,6 @@ is not completion when the requirement is to implement that feature.
 
 - Header dependency emission (GAP-0022): four failing regressions now pass;
   valid generated headers compile as C11/C++17. Cross-platform CI pending.
+
+- External function addresses (GAP-0059): real libc callback regression and
+  nested managed-callback rejection added; platform verification pending.

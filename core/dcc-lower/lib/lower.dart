@@ -602,7 +602,18 @@ DCType _externSignatureType(
     heapLayouts: heapLayouts,
     context: context,
   );
-  if (lowered is DCHeapPointer || lowered is DCWeakPointer) {
+  bool hasManagedValue(DCType value) {
+    if (value is DCHeapPointer || value is DCWeakPointer) return true;
+    if (value is DCFuncPtr) {
+      return hasManagedValue(value.returnType) ||
+          value.params.any((parameter) => hasManagedValue(parameter.type));
+    }
+    if (value is DCStruct) {
+      return value.fields.any((field) => hasManagedValue(field.type));
+    }
+    return false;
+  }
+  if (hasManagedValue(lowered)) {
     throw DccLowerError(
       '$context: an ARC-managed HeapObject/Weak<T> cannot appear in an '
       '`@extern` C signature — the ownership convention across that boundary '
@@ -4269,22 +4280,30 @@ class _BareFunctionLowerer {
 
   /// `final f = topLevelFn;` — Kernel's `StaticTearOff`.
   ///
-  /// Restricted to a `@bare` top-level procedure, and both halves of that
-  /// matter. A GENERIC one is refused by `_funcPtrTypeOfNode` (a template has
-  /// no address). An `@extern` C symbol is refused here: its ARC convention is
-  /// whatever the C author decided, and nothing in this compiler can check
-  /// that a C function releases a `@owned` argument — so the `DCFuncPtr` type
-  /// this would produce would be an assertion, not a derivation, which is
-  /// precisely what ADR-0060 is built to avoid.
+  /// External addresses use the same validated, unmanaged signature as direct
+  /// C calls. The symbol must already be registered in this object's manifest.
   DCValue _lowerStaticTearOff(Procedure target) {
     final name = target.name.text;
+    if (_hasMarkerAnnotation(target.annotations, '_Extern', preludeUri)) {
+      if (!target.isExternal || !externNames.contains(name)) {
+        throw DccLowerError(
+          '"$context": external function "$name" is not registered in this '
+          "object's extern manifest",
+        );
+      }
+      // Revalidate the actual declaration, not just its link name.
+      for (final parameter in target.function.positionalParameters) {
+        _externSignatureType(parameter.type, preludeUri: preludeUri,
+            heapLayouts: heapLayouts, context: context, allowVoid: false);
+      }
+      _externSignatureType(target.function.returnType, preludeUri: preludeUri,
+          heapLayouts: heapLayouts, context: context, allowVoid: true);
+      return _lowerFuncRef(name, target.function, what: 'external function "$name"');
+    }
     if (!_hasMarkerAnnotation(target.annotations, '_Bare', preludeUri)) {
       throw DccLowerError(
-        '"$context": "$name" is torn off as a function pointer but is not '
-        '`@bare`. Only a `@bare` top-level function has a signature whose ARC '
-        'convention this compiler derived rather than assumed; an `@extern` C '
-        'symbol\'s convention is unverifiable from here '
-        '(docs/known-gaps.md GAP-0059)',
+        '"$context": "$name" is torn off as a function pointer but is neither '
+        '`@bare` nor a registered `@extern` function',
       );
     }
     if (target.isExternal) {

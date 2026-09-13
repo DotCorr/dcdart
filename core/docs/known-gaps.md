@@ -2444,21 +2444,14 @@ callback hard to declare in the first place; closing GAP-0057 without closing th
 ## GAP-0059 — an `@extern` C function cannot be torn off as a function pointer
 
 **Domain:** dcc-lower
-**Status:** OPEN — deliberate refusal in ADR-0060, not an oversight
+**Status:** IMPLEMENTED IN DEVELOPMENT for unmanaged signatures; platform verification pending.
 
-`_lowerStaticTearOff` accepts a `@bare` top-level procedure only. An `@extern` C symbol is rejected
-by name.
-
-The reason is the one ADR-0060 is built on: a `DCFuncPtr`'s ownership must be **derived** from a
-declaration this compiler checked, and an external C function's ARC convention is whatever its author
-decided. Emitting a pointer type for it would be an assertion dressed as a derivation, and the whole
-elision result rests on that distinction holding.
-
-**Cost of the workaround:** the canonical C-interop shape — handing a DCDart comparator to `qsort`,
-or storing a C callback in a DCDart table — is unreachable in that direction. The reverse direction
-(C passing a function pointer INTO a DCDart higher-order function) works today and is tested. A
-closing fix probably looks like an explicit ownership declaration on the `@extern` side, which is
-GAP-0057's question again from the other end.
+ADR-0079 permits addresses of registered external functions with validated
+signatures. The regression calls the system libc `abs` through a DCDart callback
+and returns its address for C to invoke. Managed references, including those
+nested inside callbacks, remain rejected until explicit C ownership conventions
+are specified (GAP-0057/GAP-0019). Raw pointer signatures needed for qsort remain
+tracked in GAP-0025. This entry is not proof of complete managed C interoperability.
 
 ---
 

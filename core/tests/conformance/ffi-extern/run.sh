@@ -78,6 +78,14 @@ command -v llvm-nm >/dev/null 2>&1 || fail "llvm-nm not found on PATH (required 
 # thing under test proves nothing.
 EXPECTED_EXTERNS="dcx_add dcx_answer dcx_checked dcx_clamp8 dcx_mix32 dcx_record dcx_widen"
 
+# Nested callbacks must not smuggle undecided ARC conventions into C.
+if "${DCC_CMD[@]}" build --mode bare --target host "$SCRIPT_DIR/managed_callback.dart" \
+    -o "$WORKDIR/invalid.o" > "$WORKDIR/invalid.log" 2>&1; then
+  fail "external callback carrying a managed reference compiled"
+fi
+grep -q 'ownership convention across that boundary' "$WORKDIR/invalid.log" \
+  || { cat "$WORKDIR/invalid.log"; fail "wrong managed callback diagnostic"; }
+
 # ---------------------------------------------------------------------------
 # Step 1 — dcc build (freestanding x86-64), real undefined symbols, manifest.
 # ---------------------------------------------------------------------------
@@ -249,7 +257,7 @@ LIBC_OBJ="$WORKDIR/libc_calls.o"
 
 LIBC_MANIFEST="$LIBC_OBJ.externs"
 [[ -f "$LIBC_MANIFEST" ]] || fail "dcc did not write an extern manifest for libc_calls.dart"
-for sym in ffs toupper putchar; do
+for sym in ffs toupper putchar abs; do
   grep -qx "$sym" "$LIBC_MANIFEST" || fail "libc manifest is missing \"$sym\""
 done
 
