@@ -7,5 +7,5 @@ ENV PATH="/usr/lib/dart/bin:${PATH}" DCDART_DART="/usr/lib/dart/bin/dart"
 COPY toolchain-src/ /opt/dcdart/
 COPY adapter.dart compile.py /opt/dcdart/
 WORKDIR /opt/dcdart/core/dcc
-RUN dart pub get && dart --packages=.dart_tool/package_config.json compile exe /opt/dcdart/adapter.dart -o /opt/dcdart/adapter
+RUN dart pub get && dart compile exe --packages=.dart_tool/package_config.json /opt/dcdart/adapter.dart -o /opt/dcdart/adapter
 WORKDIR /workspace
