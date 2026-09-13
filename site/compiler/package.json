@@ -12,7 +12,11 @@
   "license": "Apache-2.0 WITH LLVM-exception",
   "type": "module",
   "dependencies": {
-    "@cloudflare/sandbox": "^0.12.9"
+    "@cloudflare/sandbox": "0.12.9"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@types/node": "^26.5.1",
+    "typescript": "^7.0.2"
+  }
 }

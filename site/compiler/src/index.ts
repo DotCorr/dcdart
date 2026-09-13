@@ -55,7 +55,7 @@ export default {
       return json({ error: "Invalid JSON." }, 400);
     }
     if (
-      typeof payload.source !== "string" ||
+      typeof payload?.source !== "string" ||
       new TextEncoder().encode(payload.source).length > 32768
     )
       return json({ error: "Source must be at most 32 KiB." }, 400);
@@ -85,7 +85,9 @@ export default {
         output = JSON.parse(result.stdout);
       } catch {
         return json(
-          { error: "Compiler could not produce a result. Please retry." },
+          {
+            error: `Compiler process failed (${result.exitCode}): ${(result.stderr || result.stdout || "No diagnostics returned").slice(-2000)}`,
+          },
           503,
         );
       }

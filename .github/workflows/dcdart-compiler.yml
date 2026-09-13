@@ -2,7 +2,7 @@ name: Deploy playground compiler
 on:
   push:
     branches: [codex/dcdart-web-playground]
-    paths: ['site/compiler/**', '.github/workflows/dcdart-compiler.yml']
+    paths: ['site/compiler/Dockerfile', 'site/compiler/adapter.dart', 'site/compiler/compile.py', 'site/compiler/prepare.mjs', '.github/workflows/dcdart-compiler.yml']
   workflow_dispatch:
 permissions:
   contents: read
