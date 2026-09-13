@@ -2278,32 +2278,19 @@ never links a host binary.
 
 ---
 
-## GAP-0049 — the prelude must be imported by file path; there is no `--prelude` flag
+## GAP-0049 — prelude imports still require a file path
 
 **Domain:** dcc (CLI)
-**Status:** OPEN
+**Status:** PARTIALLY RESOLVED — explicit `--prelude` is implemented; a package URI remains absent.
 
-Every DCDart source file must import the prelude, and the only way to name it is a plain file path:
+`dcc build --prelude <path>` selects the prelude file, and source imports must identify the same
+lexically normalized file URI. Relative paths are permitted; symlink aliases are not folded.
+On Windows use a `file:///C:/…` URI in source and the native path for `--prelude`.
 
-```dart
-import '/absolute/path/to/DCDart/core/runtime/dc-core-bare/prelude.dart';
-```
-
-In-repo examples use a relative path (`'../../runtime/dc-core-bare/prelude.dart'`), which works
-because they sit at a known depth. Anything outside the repo needs an absolute path. `dcc build` has
-no `--prelude` flag and there is no package URI for `dc:core.bare`, so a user's own project cannot
-refer to the prelude portably.
-
-**Cost of the workaround:** every file outside the repo carries a machine-specific absolute path,
-which means no DCDart source file written today is portable between two developers' machines. It
-also makes the first ten minutes with the language look worse than the language is — this is the
-first thing anyone types.
-
-**Next step:** either a `--prelude <path>` flag on `dcc build` (small, unblocks portability
-immediately) or a real `dc:core.bare` URI resolved by the driver (correct, more work). The flag does
-not preclude the URI. Found while writing `docs/testing-setup.md` — worth noting that the gap
-surfaced from *documenting the workflow end to end*, not from any test, because every existing
-consumer lives inside the repo where the relative path happens to work.
+The previous statement that no `--prelude` flag existed was stale. The flag is implemented in
+`dcc/lib/cli_args.dart` and `dcc/lib/pipeline.dart` and is used by distribution smoke tests.
+A built-in `dc:core.bare` URI is still not available, so projects must arrange a consistent
+prelude location rather than assuming a package import exists.
 
 ---
 

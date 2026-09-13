@@ -157,15 +157,16 @@ u64 sumTo(u64 n) {
             <span class="eyebrow">Get started</span>
             <h2>A small start.<br />A native binary.</h2>
             <p>
-              v0.1.0 is available for macOS on Apple Silicon through the DotCorr
-              Homebrew tap.
+              v0.1.1 adds native iOS and Android targets. Install the compiler
+              on macOS Apple Silicon or Linux through Homebrew, or Windows
+              through Scoop.
             </p>
             <a href="docs.html#setup">Build your first program ↗</a>
           </div>
           <div>
             <div class="terminal">
               <div class="terminal-top">
-                <span>MACOS / APPLE SILICON</span
+                <span>MACOS &amp; LINUX</span
                 ><button
                   class="copy"
                   data-copy="install-command"
@@ -176,8 +177,14 @@ u64 sumTo(u64 n) {
               </div>
               <pre id="install-command">
 brew tap dotcorr/tap
+brew trust --formula dotcorr/tap/dcdart
 brew install dcdart</pre>
             </div>
+            <p class="install-note">
+              Windows:
+              <a href="docs.html#windows-install">install with Scoop ↗</a>.
+              Linux requires glibc 2.39 or newer.
+            </p>
             <p class="install-note">
               Compiling source also requires
               <a href="https://dart.dev/get-dart/archive">Dart SDK 3.12.2</a>.
@@ -185,7 +192,7 @@ brew install dcdart</pre>
               <a href="docs.html#setup">setup guide</a>.
             </p>
             <p class="install-note">
-              <a href="https://github.com/DotCorr/dcdart/releases/tag/v0.1.0"
+              <a href="https://github.com/DotCorr/dcdart/releases/tag/v0.1.1"
                 >Download the release archive ↗</a
               >
             </p>
@@ -199,8 +206,9 @@ brew install dcdart</pre>
             <h2>Early. Working. Evolving.</h2>
           </div>
           <p>
-            The compiler is real; the language is still growing. We publish the
-            limits alongside the code.
+            Native output for macOS, Linux, Windows, iOS, Android, and bare
+            metal. Installation packages and target support are documented
+            separately.
           </p>
         </div>
         <table class="status-table">
@@ -219,33 +227,33 @@ brew install dcdart</pre>
                   >Homebrew / DotCorr tap ↗</a
                 >
               </td>
-              <td>macOS · Apple Silicon</td>
-              <td><span class="tag live">v0.1.0 / LIVE</span></td>
+              <td>macOS ARM64 · Linux x86-64 / ARM64</td>
+              <td><span class="tag live">v0.1.1 / LIVE</span></td>
             </tr>
             <tr>
               <td>
-                <a href="https://github.com/DotCorr/dcdart/releases/tag/v0.1.0"
+                <a
+                  href="https://github.com/DotCorr/scoop-bucket/blob/main/bucket/dcdart.json"
+                  >Scoop / DotCorr bucket ↗</a
+                >
+              </td>
+              <td>Windows x86-64</td>
+              <td><span class="tag live">v0.1.1 / LIVE</span></td>
+            </tr>
+            <tr>
+              <td>
+                <a href="https://github.com/DotCorr/dcdart/releases/tag/v0.1.1"
                   >GitHub Releases ↗</a
                 >
               </td>
-              <td>Archive + Homebrew bottle</td>
-              <td><span class="tag live">v0.1.0 / LIVE</span></td>
-            </tr>
-            <tr>
-              <td>npm · pub.dev · crates.io · PyPI</td>
-              <td>No dcdart package found</td>
-              <td><span class="tag">NOT LISTED</span></td>
-            </tr>
-            <tr>
-              <td>Homebrew core · AUR</td>
-              <td>No dcdart entry found</td>
-              <td><span class="tag">NOT LISTED</span></td>
+              <td>macOS · Linux · Windows</td>
+              <td><span class="tag live">v0.1.1 / LIVE</span></td>
             </tr>
           </tbody>
         </table>
         <div class="under-link">
-          <span>Registry checks: 13 September 2026.</span
-          ><a href="docs.html#limits">Read the current limitations ↗</a>
+          <span>Release &amp; package checks: 13 September 2026.</span
+          ><a href="docs.html#targets">Desktop, iOS &amp; Android targets ↗</a>
         </div>
       </section>
       <footer class="foot">

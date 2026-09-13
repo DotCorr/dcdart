@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "description": "DCDart website and real WebAssembly execution playground",
   "scripts": {
-    "build": "node tools/build-site.mjs",
+    "build": "npm run check:release && node tools/build-site.mjs",
     "build:runtime": "node tools/build-runtime.mjs",
     "dev": "npm run build && wrangler pages dev public",
     "test": "node --test tests/runtime.test.mjs",
     "test:browser": "playwright test",
-    "deploy": "npm run build && wrangler pages deploy public --project-name dcdart --branch main"
+    "deploy": "npm run check:release -- --live && npm run build && wrangler pages deploy public --project-name dcdart --branch main",
+    "check:release": "node tools/check-release.mjs"
   },
   "keywords": [],
   "author": "",

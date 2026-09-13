@@ -1,0 +1,22 @@
+name: Check release and website consistency
+on:
+  pull_request:
+    paths: ['site/**', 'core/backend/lib/targets.dart', 'core/dcc/bin/dcc.dart', 'core/dcc/pubspec.yaml']
+  push:
+    branches: [main, codex/dcdart-web-playground]
+    paths: ['site/release.json', 'site/index.html', 'site/docs.html', 'site/tools/check-release.mjs', 'core/backend/lib/targets.dart', 'core/dcc/bin/dcc.dart', 'core/dcc/pubspec.yaml']
+  release:
+    types: [published]
+permissions:
+  contents: read
+jobs:
+  consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node site/tools/check-release.mjs --live
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -19,3 +19,7 @@ The compiler has a 32 KiB source limit, a 40-second process limit, six requests 
 Validation: all nine Chromium browser flows passed on https://dcdart.dotcorr.com with ordinary DNS and TLS verification. These include edited source producing 42 and 97, genuine syntax errors, infinite-loop termination, saved drafts surviving reload, real heap accounting in the example modules, unsigned precision, runtime traps, corrupted binaries, desktop/mobile layouts, and response headers. After explicitly selecting LLVM 21 for sandbox commands, the hosted edited-source regression passed again. A separate live heap-object program returned 37 with zero live allocations after return. The two compiler-input unit tests pass. The unchanged precompiled runtime suite previously passed all 11 test groups. CSS and entry scripts receive content revisions in the generated HTML so returning visitors get matching assets.
 
 For routine verification: `PLAYGROUND_URL=https://dcdart.dotcorr.com npm run test:browser` from `site/`.
+
+## Release documentation refresh
+
+The landing page and docs now track v0.1.1, all eleven target aliases/triples, mobile SDK requirements, and actual macOS/Linux/Windows installation channels. `npm run deploy` first runs a live GitHub/Homebrew/Scoop consistency check; it refuses stale release metadata or invalid target documentation. Package-manager install/compile/link/execute checks passed on macOS, Linux, and Windows. The existing website/playground design and runtime behavior are preserved.

@@ -257,8 +257,7 @@ ADR-0037).** Four things landed together, and the first is much larger than it l
     so in one sentence instead of failing deep inside `clang`. The deeper fix was conceptual —
     `--mode` (which language subset) and `--target` (which machine) had been conflated, and they are
     orthogonal: a `@bare` object is a plain C-ABI object, which is why `demo-collatz` had been linking
-    into an ordinary hosted C program since ADR-0032. All eight targets cross-compile from one macOS
-    machine and all eight are zero-undefined-symbol clean.
+    into an ordinary hosted C program since ADR-0032. Those original eight targets were cross-compiled from one macOS machine with zero undefined symbols in the tested objects. Release 0.1.1 adds three mobile target identities; see [the mobile target report](docs/mobile-targets-0.1.1.md) for its separate compile, link, and device-execution scope.
 17. **(ADR-0034)** `dcc --emit-header` generates the C declarations from the same DC-IR the object
     comes from, so a caller cannot hand-write a prototype that silently disagrees with the real ABI.
     Verified with a C program that includes only the generated header and calls a DCDart function
@@ -308,3 +307,7 @@ GAP-0003 retitled, not closed outright).
 **What closed GAP-0005** (the Windows-can't-link-ELF blocker common to every target): WSL2 + Ubuntu,
 `clang`/`llvm-nm` (apt), a matching Linux Dart SDK. Local tooling gap, not a DCDart limitation — `dcc`
 itself ran fine on Windows all along.
+
+## Published installation packages
+
+See [distribution and release verification](docs/distribution.md) for current compiler hosts, package managers, mobile targets, prerequisites, and update rules.

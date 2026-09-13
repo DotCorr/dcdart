@@ -66,3 +66,7 @@ The container uses matching Sandbox SDK/image 0.12.9, Dart 3.12.2, and LLVM 21. 
 ## Hero artwork
 
 `hero-metal.png` was generated with the built-in image generator. Prompt: premium abstract 3D hero background; near-black field and diffuse silver light upper-left; liquid titanium/chrome organic form rising from the bottom, with champagne gold, cobalt blue, and silver rim reflections; empty space above; no text, UI, logos, or stars.
+
+## Release consistency
+
+Read `AGENTS.md` in this directory before changing release-related content. `npm run check:release -- --live` compares the website against current GitHub releases, published asset checksums, the target registry, CLI version, Homebrew, and Scoop. Deployment runs this gate automatically. Update `release.json`, the landing/docs, and `RELEASE-STATUS.md` together when publishing compiler changes.

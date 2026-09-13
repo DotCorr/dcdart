@@ -11,14 +11,25 @@ record — lives under [`core/`](core/README.md). Start there.
 — prerequisites, the fresh-clone step that a clone cannot build without, a first program end to end,
 and the two behaviours (byte-counted `.length`, trapping arithmetic) that surprise people.
 
-## Install (macOS, Apple Silicon)
+## Install v0.1.1 (macOS, Linux, Windows)
 
 ```sh
-brew tap dotcorr/tap https://github.com/DotCorr/homebrew-tap
-brew install dotcorr/tap/dcdart
+brew tap dotcorr/tap
+brew trust --formula dotcorr/tap/dcdart
+brew install dcdart
+# Upgrading: brew update && brew upgrade dcdart
 ```
 
-Then compile a program (pass the shipped prelude — its path is matched lexically, so spell it the
+Homebrew supports macOS ARM64 and Linux x86-64/ARM64 (glibc 2.39+). Windows x86-64 uses the official Scoop bucket:
+
+```powershell
+scoop bucket add dotcorr https://github.com/DotCorr/scoop-bucket
+scoop install dotcorr/dcdart
+```
+
+The [release](https://github.com/DotCorr/dcdart/releases/tag/v0.1.1) includes native archives and checksums. iOS device, iOS Simulator, and Android ARM64 are compilation targets; see [mobile support](core/docs/mobile-targets-0.1.1.md) and [installation prerequisites](core/docs/distribution.md).
+
+On macOS/Linux, compile a program (pass the shipped prelude — its path is matched lexically, so spell it the
 same in your source's import):
 
 ```sh

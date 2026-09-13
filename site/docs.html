@@ -134,7 +134,8 @@
         <h4>Toolchain</h4>
         <a href="#dcc">dcc</a>
         <a href="#targets">Targets</a>
-        <a href="#setup">Build &amp; run</a>
+        <a href="#mobile">iOS &amp; Android</a>
+        <a href="#setup">Install, build &amp; run</a>
         <h4>Truth</h4>
         <a href="#browser">Browser execution</a>
         <a href="#limits">Limitations</a>
@@ -142,6 +143,13 @@
 
       <main class="doc-body" id="docs-main">
         <h1>DCDart documentation</h1>
+        <p>
+          Release
+          <a href="https://github.com/DotCorr/dcdart/releases/tag/v0.1.1"
+            >v0.1.1</a
+          >
+          · Cross-checked 13 September 2026.
+        </p>
         <p class="lede">
           A working subset of Dart, compiled ahead-of-time to native object
           files with a C ABI. This page documents what is real today; each
@@ -445,23 +453,27 @@ void uartInit(u64 port) {
           <tr>
             <td><code>--mode</code></td>
             <td>
-              <code>bare</code> (freestanding C-ABI object — the working mode)
-              or <code>hosted</code> (not yet implemented)
+              <code>bare</code> (implemented systems-language subset) or
+              <code>hosted</code> (not yet implemented)
             </td>
           </tr>
           <tr>
             <td><code>--target</code></td>
             <td>
-              <code>host</code>, <code>macos-arm64</code>,
-              <code>linux-x86_64</code>, <code>windows-x86_64</code>,
-              <code>darwin-x86_64</code>, <code>linux-aarch64</code>,
-              <code>windows-aarch64</code>, <code>bare-x86_64</code> (the
-              original default)
+              <code>host</code> or an alias/triple from the
+              <a href="#targets">complete target registry below</a>. Defaults to
+              <code>bare-x86_64</code>.
             </td>
           </tr>
           <tr>
             <td><code>--emit-header</code></td>
             <td>Also write the generated C header for every exported symbol</td>
+          </tr>
+          <tr>
+            <td><code>--prelude</code></td>
+            <td>
+              Explicit prelude file path; import the same file in your source.
+            </td>
           </tr>
           <tr>
             <td><code>-o</code></td>
@@ -474,25 +486,132 @@ void uartInit(u64 port) {
           zero-undefined-symbols spine check).
         </p>
 
-        <h2 id="targets">Targets</h2>
+        <h2 id="targets">Compilation targets</h2>
         <p>
-          All eight targets cross-compile from one machine and are
-          zero-undefined-symbol clean — ELF, Mach-O and COFF across x86-64 and
-          aarch64. <code>--mode</code> (language subset) and
-          <code>--target</code> (machine) are orthogonal: a
-          <code>@bare</code> object is a plain C-ABI object, which is why DCDart
-          code links into ordinary hosted programs just as happily as into
-          freestanding ones.
+          v0.1.1 has eleven explicit targets, plus <code>host</code> to select
+          the development machine. The compiler’s installation platform and the
+          platform your code targets are separate. Cross-linking requires the
+          destination platform’s SDK, libraries, and linker.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Target</th>
+              <th>LLVM platform triple</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>bare-x86_64</code></td>
+              <td><code>x86_64-unknown-none-elf</code></td>
+            </tr>
+            <tr>
+              <td><code>bare-aarch64</code></td>
+              <td><code>aarch64-unknown-none-elf</code></td>
+            </tr>
+            <tr>
+              <td><code>linux-x86_64</code></td>
+              <td><code>x86_64-unknown-linux-gnu</code></td>
+            </tr>
+            <tr>
+              <td><code>linux-aarch64</code></td>
+              <td><code>aarch64-unknown-linux-gnu</code></td>
+            </tr>
+            <tr>
+              <td><code>macos-x86_64</code></td>
+              <td><code>x86_64-apple-macosx11.0.0</code></td>
+            </tr>
+            <tr>
+              <td><code>macos-arm64</code></td>
+              <td><code>arm64-apple-macosx11.0.0</code></td>
+            </tr>
+            <tr>
+              <td><code>ios-arm64</code></td>
+              <td><code>arm64-apple-ios16.0</code></td>
+            </tr>
+            <tr>
+              <td><code>ios-simulator-arm64</code></td>
+              <td><code>arm64-apple-ios16.0-simulator</code></td>
+            </tr>
+            <tr>
+              <td><code>android-arm64</code></td>
+              <td><code>aarch64-linux-android26</code></td>
+            </tr>
+            <tr>
+              <td><code>windows-x86_64</code></td>
+              <td><code>x86_64-pc-windows-msvc</code></td>
+            </tr>
+            <tr>
+              <td><code>windows-arm64</code></td>
+              <td><code>aarch64-pc-windows-msvc</code></td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          <code>--mode bare</code> selects the implemented language subset;
+          <code>--target</code> selects the machine and object format. Emitted
+          objects use the C ABI. This does not implement the general hosted Dart
+          runtime.
+        </p>
+
+        <h2 id="mobile">iOS &amp; Android in v0.1.1</h2>
+        <p>
+          Compile the same systems code for iOS 16+ arm64 devices, iOS 16+ arm64
+          simulators, and Android arm64 API 26+. Device and simulator objects
+          have distinct Apple platform triples. Android uses its Android ABI,
+          not a renamed Linux object.
+        </p>
+        <pre><code>dcc build --mode bare --target ios-arm64 logic.dart -o logic-ios.o --emit-header logic-ios.h --prelude "$PRELUDE"
+dcc build --mode bare --target ios-simulator-arm64 logic.dart -o logic-sim.o --emit-header logic-sim.h --prelude "$PRELUDE"
+dcc build --mode bare --target android-arm64 logic.dart -o logic-android.o --emit-header logic-android.h --prelude "$PRELUDE"</code></pre>
+        <p>
+          Apple linking requires macOS and Xcode’s matching SDK. Android linking
+          requires the NDK and its API-level compiler wrapper. These commands
+          emit an object and C header; they do not create an IPA, APK, or signed
+          application.
+        </p>
+        <p>
+          Swift/Objective-C projects can link the object and import the
+          generated C header. Android projects can link it into a native library
+          with the NDK and expose it through JNI. Swift Package Manager,
+          CocoaPods, Maven, and Gradle are application/library integration
+          choices; no DCDart package for those managers is currently published.
+        </p>
+        <div class="callout">
+          <b>Verified scope:</b> the shared mobile conformance source compiled
+          and linked for macOS, iOS device, iOS Simulator, and Android arm64.
+          Five behavioral cases ran on macOS and iOS Simulator. Android linked
+          as an executable and shared library; Android and iOS device execution
+          were not performed.
+        </div>
+        <p>
+          Exact toolchain commands and evidence:
+          <a
+            href="https://github.com/DotCorr/dcdart/blob/v0.1.1/core/docs/mobile-targets-0.1.1.md"
+            >mobile target release notes</a
+          >
+          and
+          <a
+            href="https://github.com/DotCorr/dcdart/blob/v0.1.1/core/tests/conformance/mobile-native/run.py"
+            >conformance harness</a
+          >. No Dart VM is linked into the generated application.
         </p>
 
         <h2 id="setup">Build &amp; run</h2>
         <p>
-          On macOS with Apple Silicon, install v0.1.0 from the DotCorr tap. A
-          Dart SDK 3.12.2 must be available on <code>PATH</code>, or set
-          <code>DCDART_DART</code> to its executable.
+          Install v0.1.1 through the DotCorr Homebrew tap on macOS Apple Silicon
+          or Linux x86-64/ARM64. Linux archives were built and tested on Ubuntu
+          24.04 and require glibc 2.39 or newer. A Dart SDK 3.12.2 must be
+          available on <code>PATH</code>, or set <code>DCDART_DART</code> to its
+          executable.
         </p>
-        <pre><code>brew tap dotcorr/tap https://github.com/DotCorr/homebrew-tap
-brew install dotcorr/tap/dcdart
+        <pre><code>brew tap dotcorr/tap
+brew trust --formula dotcorr/tap/dcdart
+brew install dcdart
+# Already installed?
+brew update
+brew upgrade dcdart
+dcc --version  # dcc 0.1.1
 
 # compile a program — pass the shipped prelude; its path is matched lexically,
 # so spell it the same in your source's import
@@ -533,8 +652,51 @@ int main(void) {
 ./example
 # 4950</code></pre>
         <p>
-          The installed Homebrew v0.1.0 compiler was verified with this
-          calculation on 13 September 2026.
+          The packaged compiler is tested by compiling, linking, and executing
+          this calculation on each advertised native host. Installing a compiler
+          does not install Dart SDK 3.12.2, Clang, or a platform SDK; those
+          remain prerequisites.
+        </p>
+        <h3 id="windows-install">Windows x86-64 / Scoop</h3>
+        <p>
+          Install <a href="https://scoop.sh">Scoop</a> first. The official
+          DotCorr bucket provides the native x86-64 compiler. Keep Dart SDK
+          exactly 3.12.2 and Clang/LLVM available; use a Visual Studio Developer
+          PowerShell with C++ build tools for native linking.
+        </p>
+        <pre><code>scoop bucket add dotcorr https://github.com/DotCorr/scoop-bucket
+scoop install dotcorr/dcdart
+dcc --version
+# For later upgrades: scoop update; scoop update dcdart
+
+$prelude = Join-Path (scoop prefix dcdart) 'core/runtime/dc-core-bare/prelude.dart'
+$preludeUri = ([System.Uri]$prelude).AbsoluteUri
+# Import the printed file URI in your DCDart source:
+$preludeUri
+dcc build --mode bare --target host main.dart -o main.obj --emit-header main.h --prelude "$prelude"
+clang host.c main.obj -o example.exe
+./example.exe</code></pre>
+        <p>
+          The source’s import must point to the same prelude file supplied to
+          <code>--prelude</code>. Windows uses a <code>file:///C:/…</code> URI
+          in the source import. A native Windows ARM64 compiler archive is not
+          published; Windows ARM64 remains a code-generation target.
+        </p>
+        <h3>Other installation options</h3>
+        <p>
+          Download verified archives for macOS ARM64, Linux x86-64/ARM64, and
+          Windows x86-64 from
+          <a href="https://github.com/DotCorr/dcdart/releases/tag/v0.1.1"
+            >GitHub Releases</a
+          >. Keep the directory layout intact. macOS Intel currently requires a
+          source build. Use the official DotCorr tap, Scoop bucket, or archives
+          above instead of assuming a package exists in a community or
+          operating-system repository.
+        </p>
+        <p>
+          DCDart is a native toolchain; npm, pub.dev, crates.io, and PyPI
+          packages are not required to install it. The compiler can run on Linux
+          under WSL; use the Linux package and Linux toolchain there.
         </p>
         <p>
           The canonical source walkthrough is
@@ -543,7 +705,7 @@ int main(void) {
             ><code>core/docs/testing-setup.md</code></a
           >. The short version:
         </p>
-        <pre><code>git clone https://github.com/DotCorr/dcdart
+        <pre><code>git clone --branch v0.1.1 https://github.com/DotCorr/dcdart
 cd dcdart
 bash core/scripts/vendor-frontend.sh   # required — restores the vendored frontend
 source core/scripts/dcdart-env.sh

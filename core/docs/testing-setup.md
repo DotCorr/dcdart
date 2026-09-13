@@ -132,9 +132,10 @@ import '/absolute/path/to/DCDart/core/runtime/dc-core-bare/prelude.dart';
 @bare u64 greetingLength() => Str("hello from DCDart").length;
 ```
 
-> **The import path is ugly and that is a real gap, not a style choice.** `dcc` has no `--prelude`
-> flag, so the prelude must be reachable as a plain file path — absolute, or relative if your file
-> sits inside the repo (the examples use `'../../runtime/dc-core-bare/prelude.dart'`). GAP-0049.
+> `dcc build --prelude /absolute/path/to/prelude.dart` selects the prelude explicitly.
+> Import that same file in your source. Paths are matched as lexically normalized file URIs;
+> symlink aliases are not folded. On Windows, use a `file:///C:/…` source import.
+> A built-in `dc:core.bare` package URI is still unavailable (GAP-0049).
 
 `main.c`:
 
@@ -228,7 +229,7 @@ Being explicit so you do not spend time concluding it yourself:
 - **`ld: library 'System' not found`** on macOS → Xcode's `clang` is shadowing `/usr/bin/clang`. §1.
 - **`no @bare top-level function found`**, on a file that plainly has one → the prelude was reached
   by a **different spelling of the path** than `dcc` uses. `@bare` is recognised by comparing the
-  annotation's library URI against `Platform.script.resolve('../../runtime/dc-core-bare/prelude.dart')`,
+  annotation's library URI against the explicitly selected `--prelude` URI (or the prelude beside the compiler by default),
   and that comparison is **exact URI equality on a lexically normalised path** — `..` is folded,
   symlinks are resolved on neither side. Two spellings of one file are two libraries. Pass
   `--prelude <path>` to say which prelude you mean, or make the import agree character-for-character.
