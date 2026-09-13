@@ -20,7 +20,7 @@ def compile_source(source):
         run([os.environ.get('DCDART_CLANG','clang'),'--target=wasm32-unknown-unknown','-O2','-ffreestanding','-fno-builtin','-fno-stack-protector','-c',str(ll),'-o',str(obj)])
         exports=['--export='+f['name'] for f in functions]
         if '@dc_heap_live =' in ll.read_text():exports.append('--export=dc_heap_live')
-        run([os.environ.get('DCDART_WASM_LD','wasm-ld'),'--no-entry','--export-memory','--max-memory=16777216',*exports,str(obj),'-o',str(wasm)])
+        run([os.environ.get('DCDART_WASM_LD','wasm-ld'),'--no-entry','--max-memory=16777216',*exports,str(obj),'-o',str(wasm)])
         data=wasm.read_bytes()
         if len(data)>1048576:raise ValueError('Compiled program exceeds 1 MiB.')
         return {'wasm':base64.b64encode(data).decode(),'sha256':hashlib.sha256(data).hexdigest(),'functions':functions}
