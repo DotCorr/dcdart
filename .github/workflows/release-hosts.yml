@@ -1,0 +1,46 @@
+name: Verify additional release hosts
+on:
+  push:
+    branches: [codex/dcdart-web-playground]
+    paths: ['tools/release/**', '.github/workflows/release-hosts.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: v0.1.1
+          path: release-src
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.12.2
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+      - name: Install LLVM on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18
+          echo /usr/lib/llvm-18/bin >> "$GITHUB_PATH"
+      - name: Restore pinned frontend
+        shell: bash
+        run: bash release-src/core/scripts/vendor-frontend.sh
+      - name: Build packaged compiler and execute native smoke test
+        run: python tools/release/package.py release-src dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dcdart-${{ matrix.os }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+          if-no-files-found: error
