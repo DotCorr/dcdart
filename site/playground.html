@@ -6,14 +6,14 @@
     <title>Playground — DCDart</title>
     <meta
       name="description"
-      content="Run real DCDart-compiled WebAssembly locally. Explore loops, ARC, recursion, integers and floating point with your own inputs."
+      content="Edit DCDart source, compile it with the real compiler, and execute its WebAssembly in your browser."
     />
     <link rel="canonical" href="https://dcdart.dotcorr.com/playground" />
     <link rel="icon" href="dotcorr-isometric-white.svg" />
     <link rel="stylesheet" href="styles.css" />
-    <script type="module" src="playground.js"></script>
+    <script type="module" src="editor-bundle.js"></script>
   </head>
-  <body>
+  <body class="pad-page">
     <a class="skip" href="#main">Skip to content</a>
     <header class="site-header">
       <a class="logo" href="/"
@@ -30,128 +30,100 @@
       </nav>
       <a class="gh" href="https://github.com/DotCorr/dcdart">GitHub ↗</a>
     </header>
-    <main id="main" class="shell">
-      <div class="pg-header">
-        <span class="eyebrow"
-          ><i class="signal"></i>Local execution / WebAssembly</span
-        >
-        <h1>Meet the runtime.</h1>
-        <p>
-          Pick a program. Change its inputs. Run the actual code DCDart
-          compiled, including its generated memory management, in your browser.
-        </p>
-        <div class="pg-notice">
-          An execution playground: source is read-only and compiled ahead of
-          time. To edit and compile DCDart source,
-          <a href="docs.html#setup">install the compiler</a>. This page does not
-          simulate compilation.
-        </div>
+    <main id="main" class="pad-shell">
+      <div class="pad-heading">
+        <h1>Try DCDart in your browser.</h1>
+        <p>Edit the code. Run it. See what happens.</p>
       </div>
-      <noscript
-        ><p class="noscript">
-          JavaScript and WebAssembly are required to run these examples.
-        </p></noscript
-      >
-      <div id="load-status" role="status" class="muted">
-        Loading the runtime manifest…
-      </div>
-      <div class="playground" id="playground" hidden>
-        <nav
-          class="demo-list"
-          id="demo-list"
-          aria-label="Example programs"
-        ></nav>
-        <div class="pg-main">
-          <div class="demo-title">
-            <h2 id="demo-title"></h2>
-            <p id="demo-description"></p>
-          </div>
-          <div class="workspace">
-            <section class="source-pane" aria-label="Compiled DCDart source">
-              <div class="source-bar">
-                <span id="source-name"></span
-                ><a id="source-download" download>Download source ↓</a>
-              </div>
-              <pre
-                id="source"
-                tabindex="0"
-                aria-label="Read-only source code"
-              ></pre>
-            </section>
-            <form id="run-form" class="run-pane">
-              <label for="function">FUNCTION</label
-              ><select id="function"></select>
-              <div id="args" class="args"></div>
-              <div class="run-actions">
-                <button id="run" class="btn primary" type="submit">
-                  Run function ↗</button
-                ><button id="reset" class="btn" type="button">Reset</button>
-              </div>
-              <div class="result-box" id="result-box">
-                <span class="serial">RETURN VALUE</span
-                ><output id="result" aria-live="polite">—</output>
-                <div id="run-status" class="mini-status" role="status">
-                  Ready. Enter inputs and run.
-                </div>
-                <div id="heap-status" class="mini-status"></div>
-              </div>
-            </form>
-          </div>
-          <div class="runtime-details">
-            <span id="runtime-info"></span
-            ><a id="wasm-download" download>Download WASM ↓</a
-            ><a id="llvm-download">Inspect LLVM IR ↗</a>
-          </div>
-        </div>
-      </div>
-      <div class="learn-grid">
-        <article>
-          <h3>The same compiler. A browser target.</h3>
-          <p>
-            The build uses DCDart’s existing Kernel frontend, lowering passes,
-            and LLVM emitter. LLVM then compiles that output to WebAssembly. All
-            computation runs locally; no server executes your inputs.
-          </p>
-        </article>
-        <article>
-          <h3>Memory you can account for.</h3>
-          <p>
-            The ARC examples include DCDart’s real allocator and
-            reference-counting code. The page reads the compiled runtime’s
-            live-allocation counter after the function returns. Each run starts
-            with fresh memory.
-          </p>
-        </article>
-      </div>
-      <details>
-        <summary>Execution limits &amp; build provenance</summary>
-        <p>
-          Programs run in a separate browser worker with a two-second execution
-          limit and a 16 MiB maximum linear memory. Integer inputs preserve all
-          64 bits. Invalid values are rejected, runtime traps are reported, and
-          a stopped or failed run is discarded.
-        </p>
-        <p>
-          This experimental WASM path is verified for these examples. It does
-          not add general WASM support to the released compiler, a hosted Dart
-          runtime, OS access, or a source compiler to this page. Source
-          downloads retain their original repository-relative prelude imports;
-          use them within a checkout.
-        </p>
-        <p>
-          <a href="runtime/manifest.json"
-            >Build manifest and SHA-256 hashes ↗</a
+      <section class="code-pad" aria-label="DCDart code playground">
+        <div class="pad-toolbar">
+          <a class="pad-brand" href="/">DCDart <span>Playground</span></a>
+          <label class="sample-control"
+            >Samples
+            <select id="samples" aria-label="Samples">
+              <option value="hello">Hello, native</option>
+              <option value="loop">Loops</option>
+              <option value="functions">Functions</option>
+              <option value="float">Floating point</option>
+            </select></label
           >
-          · <a href="https://github.com/DotCorr/dcdart">Compiler source ↗</a>
+          <button id="new-program" class="tool-button">New</button
+          ><button id="reset-code" class="tool-button">Reset</button>
+          <div class="toolbar-end">
+            <button
+              id="download-code"
+              class="tool-button"
+              aria-label="Download source"
+            >
+              Download ↓</button
+            ><button id="stop-code" class="tool-button" hidden>Stop</button
+            ><button id="run-code" class="btn primary">▶ Run</button>
+          </div>
+        </div>
+        <div class="pad-columns">
+          <section class="editor-pane" aria-label="Source editor">
+            <div class="pad-pane-label">
+              <span>main.dart</span
+              ><span id="save-status">Saved on this device</span>
+            </div>
+            <div id="code-editor"></div>
+          </section>
+          <section class="output-pane" aria-label="Program output">
+            <div class="pad-pane-label">
+              <span>Output</span
+              ><button id="clear-output" class="tool-button">Clear</button>
+            </div>
+            <div class="pad-output">
+              <pre id="code-output" aria-live="polite">
+Run your code to see the result.</pre>
+            </div>
+            <div class="pad-invocation" id="invocation" hidden>
+              <label for="compiled-function">Function</label
+              ><select id="compiled-function"></select>
+              <div id="compiled-args"></div>
+              <button id="run-function" class="tool-button">
+                Run with these arguments →
+              </button>
+            </div>
+            <div class="pad-diagnostics">
+              <span class="pad-pane-label">Compiler &amp; runtime</span>
+              <pre id="code-diagnostics" role="status">
+Ready. The DCDart prelude is included automatically.</pre>
+            </div>
+          </section>
+        </div>
+        <div class="pad-statusbar">
+          <span id="pad-status">DCDart · WebAssembly</span
+          ><span>⌘ / Ctrl + Enter to run</span>
+        </div>
+      </section>
+      <div class="pad-help">
+        <span
+          >Source is compiled on our server. Your program runs in your
+          browser.</span
+        ><a href="docs.html">Language guide ↗</a>
+      </div>
+      <details class="pad-limits">
+        <summary>Supported code and execution limits</summary>
+        <p>
+          Write a single DCDart file using <code>@bare</code> functions.
+          Callable entry points accept and return <code>u64</code> or
+          <code>f64</code>. The prelude is included automatically; file imports
+          and packages are unavailable. This is DCDart’s supported language
+          subset, not the general Dart or Flutter runtime.
+        </p>
+        <p>
+          Compilation runs in an isolated, temporary container: 32 KiB of
+          source, a 40-second compile limit, and six requests per minute.
+          Execution uses fresh browser WebAssembly memory, a two-second limit,
+          and a 16 MiB memory cap. Compilation errors and unsupported features
+          are reported as errors. Source is kept on this device and sent to the
+          compiler when you press Run.
+        </p>
+        <p>
+          <a href="examples.html">Explore the precompiled runtime examples →</a>
         </p>
       </details>
-      <footer class="foot">
-        <span>© 2026 DOTCORR / DCDART</span>
-        <div class="foot-links">
-          <a href="docs.html#setup">Install the compiler ↗</a
-          ><a href="/">Overview ↗</a>
-        </div>
-      </footer>
     </main>
   </body>
 </html>

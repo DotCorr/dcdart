@@ -32,7 +32,7 @@ A Dart SDK 3.12.2 on `PATH` (or `DCDART_DART`) is required for the kernel-fronte
 
 [Website](https://dcdart.dotcorr.com) · [Playground](https://dcdart.dotcorr.com/playground) · [Documentation](https://dcdart.dotcorr.com/docs)
 
-The playground executes actual DCDart-compiled WebAssembly with editable inputs. Source is compiled ahead of time; editing and compiling arbitrary DCDart still requires the local toolchain. Website sources and reproducible runtime builds live in [`site/`](site/README.md).
+The playground lets visitors edit a single DCDart source file, compile it with the actual hosted DCDart/LLVM pipeline, and execute the resulting WebAssembly locally. The prelude is supplied automatically; callable functions currently use u64/f64 arguments and returns. Website sources and reproducible runtime builds live in [`site/`](site/README.md).
 
 ## The two numbers that define the project
 

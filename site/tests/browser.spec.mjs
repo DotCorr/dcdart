@@ -15,7 +15,7 @@ test("landing page runs genuine WASM and changes its output", async ({
 test("all demos, real heap accounting, traps, unsigned precision and reset", async ({
   page,
 }) => {
-  await page.goto("/playground");
+  await page.goto("/examples");
   await expect(page.locator("#playground")).toBeVisible();
   await page.locator("#run").click();
   await expect(page.locator("#result")).toHaveText("4950");
@@ -60,7 +60,7 @@ test("all demos, real heap accounting, traps, unsigned precision and reset", asy
   await expect(page.locator("#result")).toHaveText("Infinity");
 });
 test("long execution is terminated and next run works", async ({ page }) => {
-  await page.goto("/playground");
+  await page.goto("/examples");
   await page.locator("#arg-0").fill("1000000000000");
   await page.locator("#run").click();
   await expect(page.locator("#result")).toContainText(
@@ -77,7 +77,7 @@ test("missing binary is reported rather than replaced with canned output", async
   await page.route("**/runtime/loop.wasm", (route) =>
     route.fulfill({ status: 404, body: "missing" }),
   );
-  await page.goto("/playground");
+  await page.goto("/examples");
   await page.locator("#run").click();
   await expect(page.locator("#result")).toContainText("download failed");
 });
@@ -85,13 +85,13 @@ test("tampered binary fails integrity validation", async ({ page }) => {
   await page.route("**/runtime/loop.wasm", (route) =>
     route.fulfill({ status: 200, body: "invalid" }),
   );
-  await page.goto("/playground");
+  await page.goto("/examples");
   await page.locator("#run").click();
   await expect(page.locator("#result")).toContainText("integrity check failed");
 });
 test("mobile layouts and docs remain usable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const route of ["/", "/playground", "/docs"]) {
+  for (const route of ["/", "/examples", "/docs"]) {
     await page.goto(route);
     expect(
       await page.evaluate(
@@ -99,7 +99,7 @@ test("mobile layouts and docs remain usable", async ({ page }) => {
       ),
     ).toBe(true);
   }
-  await page.goto("/playground");
+  await page.goto("/examples");
   await page.locator("#run").click();
   await expect(page.locator("#result")).toHaveText("4950");
 });

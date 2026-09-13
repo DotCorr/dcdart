@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
-  testMatch: "browser.spec.mjs",
+  testMatch: ["browser.spec.mjs", "editor.spec.mjs"],
   use: {
     baseURL: process.env.PLAYGROUND_URL || "http://127.0.0.1:8799",
     headless: true,

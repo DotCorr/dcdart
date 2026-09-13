@@ -69,7 +69,7 @@ export default {
         JSON.stringify({ source: payload.source }),
       );
       const result = await sandbox.exec(
-        "timeout -k 2 40 python3 /opt/dcdart/compile.py /tmp/input.json",
+        "DCDART_CLANG=/usr/bin/clang-21 DCDART_WASM_LD=/usr/bin/wasm-ld-21 timeout -k 2 40 python3 /opt/dcdart/compile.py /tmp/input.json",
         { timeout: 50000 },
       );
       if (result.exitCode === 124 || result.exitCode === 137)

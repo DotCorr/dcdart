@@ -556,24 +556,32 @@ bash core/tests/run-conformance.sh     # inspect the current results</code></pre
 
         <h2 id="browser">Browser playground</h2>
         <p>
-          The <a href="playground.html">playground</a> runs real DCDart-compiled
-          WebAssembly with editable function inputs. It includes the
-          compiler-generated allocator and ARC for heap examples; live
-          allocations are read from WASM memory after each return.
+          The <a href="playground.html">playground</a> provides an editable
+          source file with syntax highlighting, samples, and a Run button. Your
+          source is sent to an isolated hosted DCDart compiler. The resulting
+          WebAssembly executes on your device in a fresh browser worker.
         </p>
         <p>
-          Compilation is performed at site build time. The browser does not
-          compile edited source. The experimental adapter uses the unchanged
-          DCDart lowerer and LLVM emitter, then LLVM’s wasm32 backend; it is not
-          a general WASM target in <code>dcc</code>. Arbitrary source
-          compilation, hosted features and operating-system APIs are unavailable
-          here.
+          Write <code>@bare</code> functions using the supported DCDart subset.
+          The prelude is included automatically; omit file directives. Entry
+          points accept and return <code>u64</code> or <code>f64</code>. Choose
+          a compiled function and change its arguments in the output pane.
+          Compiler errors and runtime traps are displayed directly.
         </p>
         <p>
-          Checked unsigned 64-bit multiplication may require LLVM’s
-          <code>__multi3</code> helper on wasm32. That helper is not bundled, so
-          this playground exposes verified division, remainder and GCD functions
-          instead. Every published module has zero unresolved imports.
+          Compilation is limited to 32 KiB of source and 40 seconds, with six
+          requests per minute. Browser execution has a two-second limit and 16
+          MiB of memory. No packages, operating-system APIs, Flutter widgets, or
+          general Dart runtime are provided. The native compiler’s language
+          limitations still apply.
+        </p>
+        <p>
+          LLVM may require the unavailable <code>__multi3</code> helper for
+          checked u64 multiplication. Such programs fail to link rather than
+          silently changing arithmetic semantics. The
+          <a href="examples.html">precompiled examples</a> remain available for
+          exploring ARC accounting and fixed-width inputs without hosted
+          compilation.
         </p>
         <h2 id="limits">Limitations, stated plainly</h2>
         <ul>

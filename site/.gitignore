@@ -6,3 +6,5 @@ playwright-report/
 worker-configuration.d.ts
 public/*
 !public/runtime/
+editor-bundle.js
+compiler/__pycache__/
