@@ -87,6 +87,8 @@ is not completion when the requirement is to implement that feature.
 - [ ] GAP-0077 — Raw and packed loads/stores implicitly promised natural alignment
 - [ ] GAP-0078 — Windows x64 Result C ABI returned the wrong value
 
+- [ ] GAP-0079 — oversized integer shifts produced LLVM poison
+
 ## Current iteration
 
 - Signed i8/i16/i32/i64 values and checked division (GAP-0026/GAP-0024):
@@ -123,3 +125,6 @@ is not completion when the requirement is to implement that feature.
   fixes added with contention/alignment regressions; platform evidence pending.
 - Shared runtime freestanding verification passes locally for linked x86-64
   and ARM64 artifacts, and rejects incomplete clients.
+
+- Shift boundaries (GAP-0079): reproduced invalid large-count results;
+  defined zero/sign fill and negative-count traps now pass locally.

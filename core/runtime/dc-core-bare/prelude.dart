@@ -121,11 +121,9 @@ extension type const u64(int _value) {
   /// `docs/known-gaps.md`'s former GAP-0006/GAP-0002 notes). Lowers to
   /// `IAnd`/`IOr`/`IXor`/`IShl`/`IShr` (`core/dc-ir/instructions.dart`) --
   /// no overflow-trap semantics apply to bit manipulation (spec §4.1's
-  /// traps are for `+`/`-`/`*` only). `>>` only, not the Dart-specific
-  /// `>>>` triple-shift operator: every DCDart sized-int type today is
-  /// unsigned (see this file), so arithmetic vs. logical right-shift are
-  /// the same operation and there's nothing for `>>>` to distinguish yet
-  /// -- add it if/when a signed sized-int type gets real prelude support.
+  /// traps are for `+`/`-`/`*` only). Counts >= width yield zero for left
+  /// shifts and unsigned right shifts, or sign fill for signed right shifts.
+  /// Negative signed counts trap (ADR-0085).
   u64 operator &(u64 other) => u64(_value & other._value);
   u64 operator |(u64 other) => u64(_value | other._value);
   u64 operator ^(u64 other) => u64(_value ^ other._value);

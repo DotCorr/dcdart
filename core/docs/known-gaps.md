@@ -3127,3 +3127,14 @@ retain their existing convention. Supported Windows aggregate layouts are the
 current two-word Result/Str forms; other layouts fail explicitly until classified.
 The regression includes C-to-DCDart and DCDart-to-C aggregate arguments/returns,
 plus a call through a function pointer.
+
+
+## GAP-0079 — oversized integer shift counts produced LLVM poison
+
+**Status:** IMPLEMENTED IN DEVELOPMENT — platform verification pending.
+
+ADR-0085 defines large-count zero/sign fill and negative-count traps. Previously
+unvalidated counts reached LLVM shift instructions, whose oversized-count result
+is poison. A source boundary regression failed before the fix and now passes
+for all integer widths. The packaged-compiler regression checks runtime results
+and negative-count traps on each release host.

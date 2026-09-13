@@ -583,14 +583,14 @@ void _emitInstruction(DCInstruction instruction, _FunctionEmitter e, {required S
     case IXor():
       _emitBitwise('xor', instruction.dest, instruction.lhs, instruction.rhs, e, context);
     case IShl():
-      _emitBitwise('shl', instruction.dest, instruction.lhs, instruction.rhs, e, context);
+      _emitShift('shl', instruction.dest, instruction.lhs, instruction.rhs, e, context);
     case IShr():
       // lhs.type's signedness picks lshr (unsigned) vs ashr (arithmetic,
       // sign-extending) -- see IShr's own doc comment (core/dc-ir/
       // instructions.dart) for why this isn't a separate instruction.
       final lhsType = instruction.lhs.type;
       final op = (lhsType is DCInt && lhsType.signed) ? 'ashr' : 'lshr';
-      _emitBitwise(op, instruction.dest, instruction.lhs, instruction.rhs, e, context);
+      _emitShift(op, instruction.dest, instruction.lhs, instruction.rhs, e, context);
     case ICmp():
       final type = _llvmType(instruction.lhs.type, context: context);
       final pred = instruction.predicate.name; // enum names match LLVM's icmp condition codes exactly
@@ -823,6 +823,38 @@ void _emitInstruction(DCInstruction instruction, _FunctionEmitter e, {required S
 /// never-trapping LLVM ops (spec §4.1's overflow-trap semantics apply to
 /// `+`/`-`/`*` only, not bit manipulation), so unlike `_emitArith` this
 /// never needs the overflow-intrinsic expansion.
+/// Sized shifts have defined large-count results, never LLVM poison.
+void _emitShift(String op, DCValue dest, DCValue lhs, DCValue rhs,
+    _FunctionEmitter e, String context) {
+  final integer = lhs.type;
+  if (integer is! DCInt || rhs.type != integer || dest.type != integer) {
+    throw BackendError('"$context": shift operands must have identical integer types');
+  }
+  final type = _llvmType(integer, context: context);
+  final width = _intBits(integer, context: context);
+  if (integer.signed) {
+    final negative = e.freshName('shiftnegative');
+    final trap = e.freshLabel('shifttrap');
+    final valid = e.freshLabel('shiftvalid');
+    e.line('%$negative = icmp slt $type %v${rhs.id.index}, 0');
+    e.terminate('br i1 %$negative, label %$trap, label %$valid');
+    e.startBlock(trap);
+    declareTrapIntrinsic(e.declaredIntrinsics);
+    e.line('call void @llvm.trap()');
+    e.terminate('unreachable');
+    e.startBlock(valid);
+  }
+  final large = e.freshName('shiftlarge');
+  final safe = e.freshName('shiftcount');
+  final shifted = e.freshName('shiftresult');
+  e.line('%$large = icmp uge $type %v${rhs.id.index}, $width');
+  // Clamp BEFORE shifting: selecting a poison result afterwards is avoidable.
+  e.line('%$safe = select i1 %$large, $type ${width - 1}, $type %v${rhs.id.index}');
+  e.line('%$shifted = $op $type %v${lhs.id.index}, %$safe');
+  final fill = op == 'ashr' ? '%$shifted' : '0';
+  e.line('%v${dest.id.index} = select i1 %$large, $type $fill, $type %$shifted');
+}
+
 void _emitBitwise(
   String op,
   DCValue dest,

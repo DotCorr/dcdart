@@ -306,7 +306,8 @@ final class IXor extends DCInstruction {
   DCValue? get result => dest;
 }
 
-/// Left shift. `rhs` (the shift amount) must carry the same `DCInt` type
+/// Left shifts discard shifted-out bits. Counts >= width yield zero; negative
+/// signed counts trap. `rhs` (the shift amount) must carry the same `DCInt` type
 /// as `lhs`/`dest` -- DCDart has no implicit widening (spec §4.1), same
 /// rule as every other binary op in this file, even though a narrower
 /// shift-amount operand would be a reasonable thing to want later.
@@ -320,7 +321,8 @@ final class IShl extends DCInstruction {
   DCValue? get result => dest;
 }
 
-/// Right shift. Logical (`lshr`) vs. arithmetic (`ashr`) is decided by
+/// Right shifts with counts >= width yield zero (unsigned) or sign fill
+/// (signed). Negative signed counts trap. Logical (`lshr`) vs. arithmetic (`ashr`) is decided by
 /// `lhs.type`'s signedness at the BACKEND (core/backend/lib/llvm_emit.dart),
 /// not encoded as a separate instruction or predicate here -- unlike
 /// `ICmp`'s ordering predicates (where `ult` vs `slt` are both
