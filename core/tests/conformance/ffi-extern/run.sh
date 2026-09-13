@@ -162,6 +162,14 @@ if [[ "$HOST_OS" == Linux* ]]; then
     FS_LINKER="clang -nostdlib"
   fi
 fi
+if [[ -z "$FS_LINKER" ]] && command -v ld.lld >/dev/null 2>&1; then
+  # LLD supports cross-host ELF linking, including ARM Linux and macOS.
+  # Select the output emulation explicitly instead of inheriting host arch.
+  if ld.lld -m elf_x86_64 -o "$FS_BIN" \
+      "$FS_DIR/start.o" "$FS_DIR/main.o" "$FS_DIR/c_side.o" "$BARE_OBJ" >>"$FS_DIR/link.log" 2>&1; then
+    FS_LINKER="ld.lld -m elf_x86_64"
+  fi
+fi
 if [[ -z "$FS_LINKER" ]] && command -v x86_64-elf-ld >/dev/null 2>&1; then
   # Apple's ld cannot link ELF; x86_64-elf-ld (brew install x86_64-elf-binutils)
   # can, which is what makes this leg real rather than skipped on macOS.

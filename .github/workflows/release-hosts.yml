@@ -58,7 +58,8 @@ jobs:
           for package in dc-objdump dc-elide backend; do
             (cd core/$package && dart pub get)
           done
-          bash core/tests/run-conformance.sh
+          bash core/tests/run-conformance.sh | tee conformance.log
+          grep -q "0 failed, 0 skipped" conformance.log
           (cd core/dc-elide && dart test)
           (cd core/backend && dart test)
       - uses: actions/upload-artifact@v4
