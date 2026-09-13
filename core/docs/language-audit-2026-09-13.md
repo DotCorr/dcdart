@@ -17,9 +17,9 @@ For each open safety issue: preserve a failing source/C regression, implement th
 
 ## Remaining priorities
 
-1. Explicit null-dereference and atomic-alignment guards; read-only pointer provenance and borrowed text lifetimes. These remain real safety work.
+1. Foreign heap-pointer validation, read-only pointer provenance, and borrowed text lifetimes remain safety work. Source nullable-access rejection is already enforced by the frontend; the previous contrary claim was disproved by a regression. Atomic alignment is guarded in v0.1.3 (ADR-0075).
 2. Multi-object runtime linking, signed integer types/division, pointer/Str C ABI support, generic methods and imported-library compilation. These require their own regression cases and compatibility decisions.
-3. Early-return propagation inside an expression that already owns temporaries needs separate lifetime coverage; the new per-consumer cleanup does not claim general expression unwinding.
+3. Error propagation cleanup now covers owned locals and pending expression arguments/receivers in v0.1.3 (GAP-0076). The new regression checks both paths and live-object counts.
 4. Benchmark and elision improvements follow correctness. OS MMIO migration belongs to the OS checkout and is not a compiler release fix.
 
 ## Recorded-gap inventory
@@ -41,7 +41,7 @@ For each open safety issue: preserve a failing source/C regression, implement th
 | [GAP-0032](known-gaps.md) | Historical resolution / partial resolution | `dcc` never passes an optimization flag, so every DCDart program ships `-O0` code |
 | [GAP-0040](known-gaps.md) | Historical resolution / partial resolution | Generic CLASSES are not monomorphized, only generic functions |
 | [GAP-0039](known-gaps.md) | Historical resolution / partial resolution | Mutable statics have no concurrency story |
-| [GAP-0038](known-gaps.md) | Open safety issue | Nullable heap references have no null SAFETY; a null dereference faults at runtime |
+| [GAP-0038](known-gaps.md) | Source checks verified; foreign boundary remains open | Nullable source access is rejected; foreign heap references lack runtime validation |
 | [GAP-0037](known-gaps.md) | Open audit / tooling / representation work | Every "not supported yet" refusal in `dcc-lower` deserves re-examination; at least one was already safe |
 | [GAP-0036](known-gaps.md) | Historical resolution / partial resolution | Port I/O is optimization-safe by ACCIDENT, not by design (now tested) |
 | [GAP-0035](known-gaps.md) | Benchmark / milestone work; historical claims need reconciliation | M3's benchmark suite cannot be WRITTEN in DCDart; the gate is unblocked but not reachable |
@@ -93,3 +93,21 @@ For each open safety issue: preserve a failing source/C regression, implement th
 | [GAP-0075](known-gaps.md) | Documented freestanding FP policy | `@bare` floating point is unavailable by default, and the escape hatch is unsafe by design |
 | [GAP-0073](known-gaps.md) | Fixed / regression added | LLVM loop-idiom recognition turns a `@bare` store loop into a `memset` LIBCALL on freestanding targets |
 | [GAP-0074](known-gaps.md) | Fixed / regression added | a fresh heap return passed DIRECTLY as a constructor argument leaks one reference |
+
+## 14 September follow-up — v0.1.3
+
+- Reproduced and fixed unchecked atomic alignment across all operations and widths.
+- Reproduced propagation leaks for a local owner and an unfinished call argument;
+  added scoped cleanup for strong/weak locals, owned parameters and expression owners.
+- Corrected GAP-0038 with compile-failure and successful nullable-flow tests.
+- Local full-suite attempt exhausted disk space; its failures/skips are not validation.
+  Clean cross-platform CI subsequently passed: 54 suites, zero failures/skips on macOS ARM64 and both Linux architectures.
+
+- GAP-0077: ordinary/volatile loads and stores now explicitly permit byte
+  alignment, making the existing packed-field layout contract valid in LLVM.
+
+- GAP-0078: expanded Windows tests exposed a Result C ABI mismatch. Definitions,
+  declarations and direct/indirect calls now use the Windows return-buffer and
+  aggregate-argument convention; native Windows packaged-compiler CI passed.
+
+Final native release evidence: [run 34786871909](https://github.com/DotCorr/dcdart/actions/runs/34786871909), compiler source `e8c5c4be8607e092b7322f29ac46ae7cdfcd535f`. Windows executes the propagation/aggregate interoperability regression; the full 54-suite count applies to macOS ARM64 and Linux x86-64/ARM64. The v0.1.3 source passed 12 backend tests and 52 optimizer tests in CI.

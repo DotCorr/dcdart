@@ -40,7 +40,7 @@ import '../lib/pipeline.dart';
 
 Future<void> main(List<String> argv) async {
   if (argv.length == 1 && argv.single == '--version') {
-    stdout.writeln('dcc 0.1.2');
+    stdout.writeln('dcc 0.1.3');
     return;
   }
   final BuildOptions options;

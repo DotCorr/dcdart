@@ -54,9 +54,9 @@ allocCont4:
   store i64 %liveafter18, ptr @dc_heap_live
   %v4 = getelementptr i8, ptr %block14, i64 16
   %v5 = getelementptr i8, ptr %v4, i64 0
-  store i64 %v0, ptr %v5
+  store i64 %v0, ptr %v5, align 1
   %v6 = getelementptr i8, ptr %v4, i64 0
-  %v7 = load i64, ptr %v6
+  %v7 = load i64, ptr %v6, align 1
   %v9 = add i64 1, 0
   %t19 = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %v0, i64 %v9)
   %v10 = extractvalue {i64, i1} %t19, 0

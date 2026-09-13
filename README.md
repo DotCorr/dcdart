@@ -10,7 +10,7 @@ record — lives under [`core/`](core/README.md). Start there.
 — prerequisites, the fresh-clone step that a clone cannot build without, a first program end to end,
 and the two behaviours (byte-counted `.length`, trapping arithmetic) that surprise people.
 
-## Install v0.1.2 (macOS, Linux, Windows)
+## Install v0.1.3 (macOS, Linux, Windows)
 
 ```sh
 brew tap dotcorr/tap
@@ -26,7 +26,7 @@ scoop bucket add dotcorr https://github.com/DotCorr/scoop-bucket
 scoop install dotcorr/dcdart
 ```
 
-The [release](https://github.com/DotCorr/dcdart/releases/tag/v0.1.2) includes native archives and checksums. iOS device, iOS Simulator, and Android ARM64 are compilation targets; see [mobile support](core/docs/mobile-targets-0.1.1.md) and [installation prerequisites](core/docs/distribution.md).
+The [release](https://github.com/DotCorr/dcdart/releases/tag/v0.1.3) includes native archives and checksums. iOS device, iOS Simulator, and Android ARM64 are compilation targets; see [mobile support](core/docs/mobile-targets-0.1.1.md) and [installation prerequisites](core/docs/distribution.md).
 
 On macOS/Linux, compile a program (pass the shipped prelude — its path is matched lexically, so spell it the
 same in your source's import):
@@ -46,7 +46,7 @@ The playground lets visitors edit a single DCDart source file, compile it with t
 
 ## Current correctness and limitations
 
-v0.1.2 fixes temporary-object and borrowed-return ownership, method `@owned` calls, boolean control flow, and freestanding buffer-loop libc assumptions. See the [language audit](core/docs/language-audit-2026-09-13.md) for regression coverage and remaining safety, ABI, and language gaps.
+v0.1.3 adds checked atomic alignment, valid packed-memory alignment, error-propagation cleanup, and the Windows x64 Result calling convention. See the [language audit](core/docs/language-audit-2026-09-13.md) for regression coverage and remaining safety, ABI, and language gaps.
 
 ## The two numbers that define the project
 
