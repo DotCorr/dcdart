@@ -78,6 +78,7 @@ blk3:
 
 define i64 @sumCollatzSteps(i64 %v0) #0 {
 entry:
+  %v2 = add i64 0, 0
   %freeheadptr5 = getelementptr [12 x ptr], ptr @dc_heap_free, i64 0, i64 0
   %freehead6 = load ptr, ptr %freeheadptr5
   %isempty7 = icmp eq ptr %freehead6, null
@@ -110,9 +111,8 @@ allocCont4:
   %liveafter18 = add i64 %livebefore17, 1
   store i64 %liveafter18, ptr @dc_heap_live
   %v1 = getelementptr i8, ptr %block14, i64 16
-  %v2 = add i64 0, 0
   %v3 = getelementptr i8, ptr %v1, i64 0
-  store i64 %v2, ptr %v3
+  store i64 %v2, ptr %v3, align 1
   %v4 = add i64 1, 0
   br label %blk1
 blk1:
@@ -131,7 +131,7 @@ ok22:
 blk2:
   %v10 = getelementptr i8, ptr %v1, i64 0
   %v11 = getelementptr i8, ptr %v1, i64 0
-  %v12 = load i64, ptr %v11
+  %v12 = load i64, ptr %v11, align 1
   %v13 = call i64 @collatzSteps(i64 %v5)
   %t23 = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %v12, i64 %v13)
   %v14 = extractvalue {i64, i1} %t23, 0
@@ -141,7 +141,7 @@ trap25:
   call void @llvm.trap()
   unreachable
 ok26:
-  store i64 %v14, ptr %v10
+  store i64 %v14, ptr %v10, align 1
   %v15 = add i64 1, 0
   %t27 = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %v5, i64 %v15)
   %v16 = extractvalue {i64, i1} %t27, 0
@@ -155,7 +155,7 @@ ok30:
 blk3:
   %v9 = phi i64 [ %v5, %ok22 ]
   %v17 = getelementptr i8, ptr %v1, i64 0
-  %v18 = load i64, ptr %v17
+  %v18 = load i64, ptr %v17, align 1
   %releasenull37 = icmp eq ptr %v1, null
   br i1 %releasenull37, label %releaseDone36, label %releaseLive38
 releaseLive38:

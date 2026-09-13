@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
@@ -26,6 +26,12 @@ for (const page of ["index.html", "docs.html"]) {
     html.includes(release.tag),
     `${page} is missing the current release`,
   );
+  for (const match of html.matchAll(/https:\/\/github\.com\/DotCorr\/dcdart\/blob\/([^/]+)\/([^"#?<>]+)/g)) {
+    if (match[1] === release.tag) {
+      assert.ok(existsSync(site + "../" + match[2]),
+        `${page} links to a missing release file: ${match[2]}`);
+    }
+  }
   for (const version of html.matchAll(/v0\.\d+\.\d+/g))
     assert.equal(version[0], release.tag, `${page} has a stale release`);
 }
