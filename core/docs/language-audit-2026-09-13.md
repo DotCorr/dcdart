@@ -102,3 +102,10 @@ For each open safety issue: preserve a failing source/C regression, implement th
 - Corrected GAP-0038 with compile-failure and successful nullable-flow tests.
 - Local full-suite attempt exhausted disk space; its failures/skips are not validation.
   Clean cross-platform CI is required before publishing these changes.
+
+- GAP-0077: ordinary/volatile loads and stores now explicitly permit byte
+  alignment, making the existing packed-field layout contract valid in LLVM.
+
+- GAP-0078: expanded Windows tests exposed a Result C ABI mismatch. Definitions,
+  declarations and direct/indirect calls now use the Windows return-buffer and
+  aggregate-argument convention; native CI remains the publication gate.

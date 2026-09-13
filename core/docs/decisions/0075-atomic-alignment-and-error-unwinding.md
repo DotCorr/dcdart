@@ -22,3 +22,7 @@ Regressions: atomic-alignment, propagate-ownership, null-safety. The first two
 reproduced failure before the corresponding fix. Null-safety instead disproved
 an outdated audit claim: the frontend already rejects unchecked nullable access.
 No promise is made that a C caller supplying an invalid heap pointer is safe.
+
+Ordinary and volatile Load/Store use `align 1`: their raw/packed address has no
+natural-alignment proof. Omission incorrectly promises ABI alignment in LLVM.
+Atomic alignment is separate and remains checked before the atomic instruction.

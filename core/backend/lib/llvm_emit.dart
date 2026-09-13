@@ -187,9 +187,11 @@ String emitModule(
   final regionBytes = heapRegionBytes;
   final sizeClasses = _sizeClassesFor(regionBytes);
   final declaredIntrinsics = <String>{};
+  final windowsAbi = targetTriple?.startsWith('x86_64-') == true &&
+      targetTriple!.contains('windows');
   final functionBuffers = <String>[];
   for (final function in module.functions) {
-    functionBuffers.add(_emitFunction(function, declaredIntrinsics, regionBytes));
+    functionBuffers.add(_emitFunction(function, declaredIntrinsics, regionBytes, windowsAbi));
   }
 
   // Every instruction that touches heap storage must be listed here, not
@@ -284,7 +286,7 @@ String emitModule(
   // are already passed to clang, compile.dart) and keeps the IR honest.
   if (module.externFunctions.isNotEmpty) {
     for (final extern in module.externFunctions) {
-      buffer.writeln(_emitExternDeclaration(extern));
+      buffer.writeln(_emitExternDeclaration(extern, windowsAbi));
     }
     buffer.writeln();
   }
@@ -308,12 +310,29 @@ String emitModule(
 
 /// One `declare <ret> @name(<params>)` line for an external C-ABI symbol
 /// (ADR-0038). Parameter names are omitted — a `declare` carries types only.
-String _emitExternDeclaration(DCExternFunction extern) {
+// The source-level value aggregates currently crossing this seam are the
+// two-word Result and Str. Reject other Windows aggregate layouts until
+// their ABI classification exists instead of silently guessing.
+bool _winIndirectAggregate(DCType type, bool windowsAbi) {
+  if (!windowsAbi || type is! DCStruct) return false;
+  bool word(DCType t) => t == DCInt.u64 || t == DCInt.i64 ||
+      t is DCPointer || t is DCHeapPointer || t is DCWeakPointer || t is DCFuncPtr;
+  if (type.fields.length != 2 || !type.fields.every((f) => word(f.type))) {
+    throw BackendError('Windows aggregate ABI supports two-word Result/Str values; '
+        'unsupported layout $type');
+  }
+  return true;
+}
+
+String _emitExternDeclaration(DCExternFunction extern, bool windowsAbi) {
+  final indirect = _winIndirectAggregate(extern.returnType, windowsAbi);
   final retType = _llvmType(extern.returnType, context: extern.linkName);
-  final params = extern.paramTypes
-      .map((t) => _llvmType(t, context: extern.linkName))
-      .join(', ');
-  return 'declare $retType @${extern.linkName}($params)';
+  final params = <String>[
+    if (indirect) 'ptr sret($retType)',
+    for (final t in extern.paramTypes)
+      _winIndirectAggregate(t, windowsAbi) ? 'ptr' : _llvmType(t, context: extern.linkName),
+  ].join(', ');
+  return 'declare ${indirect ? 'void' : retType} @${extern.linkName}($params)';
 }
 
 /// LLVM label for a DC-IR block. Block 0 keeps the "entry" label M0/M1's
@@ -375,6 +394,7 @@ String _emitFunction(
   DCFunction function,
   Set<String> declaredIntrinsics,
   int heapRegionBytes,
+  bool windowsAbi,
 ) {
   final entryBlock = function.blocks.first;
   final retType = _llvmType(function.returnType, context: function.linkName);
@@ -382,11 +402,17 @@ String _emitFunction(
   // (DCFunction's own doc: "blocks[0].params ARE the function parameters").
   // They come from `define`'s own arg list, not a phi node -- there is no
   // predecessor to phi from.
-  final params = entryBlock.params
-      .map((v) => '${_llvmType(v.type, context: function.linkName)} %v${v.id.index}')
-      .join(', ');
+  final indirectReturn = _winIndirectAggregate(function.returnType, windowsAbi);
+  final params = <String>[
+    if (indirectReturn) 'ptr sret($retType) %dc_sret',
+    for (final v in entryBlock.params)
+      _winIndirectAggregate(v.type, windowsAbi)
+          ? 'ptr %arg${v.id.index}'
+          : '${_llvmType(v.type, context: function.linkName)} %v${v.id.index}',
+  ].join(', ');
 
-  final emitter = _FunctionEmitter(function.linkName, declaredIntrinsics, heapRegionBytes);
+  final emitter = _FunctionEmitter(function.linkName, declaredIntrinsics, heapRegionBytes,
+      windowsAbi: windowsAbi, indirectReturn: indirectReturn);
 
   // Pass 1: emit every block's real instructions (NOT phi lines yet — see
   // `_collectPredecessors`'s doc comment for why the real predecessor label
@@ -396,6 +422,14 @@ String _emitFunction(
   for (final block in function.blocks) {
     final label = _labelFor(block.id);
     emitter.startBlock(label);
+    if (identical(block, entryBlock)) {
+      for (final v in entryBlock.params) {
+        if (_winIndirectAggregate(v.type, windowsAbi)) {
+          emitter.line('%v${v.id.index} = load ${_llvmType(v.type, context: function.linkName)}, '
+              'ptr %arg${v.id.index}, align 1');
+        }
+      }
+    }
 
     if (block.body.isEmpty) {
       throw BackendError(
@@ -428,7 +462,8 @@ String _emitFunction(
   // convention, which is exactly what a `@bare` symbol meant to link
   // against a plain C caller needs (m0-target.md §1's "no `dso_local`" and
   // "no `ccc` keyword needed" notes).
-  buffer.writeln('define $retType @${function.linkName}($params) #0 {');
+  emitter.prependToLabel(_labelFor(entryBlock.id), emitter.entryAllocas);
+  buffer.writeln('define ${indirectReturn ? 'void' : retType} @${function.linkName}($params) #0 {');
   buffer.write(emitter.render());
   buffer.writeln('}');
   return buffer.toString();
@@ -606,11 +641,14 @@ void _emitInstruction(DCInstruction instruction, _FunctionEmitter e, {required S
       // `load volatile` is what stops LLVM deleting an MMIO read whose value
       // it thinks it already knows (ADR-0041).
       final vol = instruction.isVolatile ? 'volatile ' : '';
-      e.line('%v${instruction.dest.id.index} = load $vol$type, ptr %v${instruction.pointer.id.index}');
+      // Raw pointers and packed fields have no natural-alignment proof.
+      // Omitting align would promise ABI alignment to LLVM, which is UB
+      // for a packed field at an odd offset. Atomics validate separately.
+      e.line('%v${instruction.dest.id.index} = load $vol$type, ptr %v${instruction.pointer.id.index}, align 1');
     case Store():
       final type = _llvmType(instruction.value.type, context: context);
       final vol = instruction.isVolatile ? 'volatile ' : '';
-      e.line('store $vol$type %v${instruction.value.id.index}, ptr %v${instruction.pointer.id.index}');
+      e.line('store $vol$type %v${instruction.value.id.index}, ptr %v${instruction.pointer.id.index}, align 1');
     case PortOut():
       // AT&T `out{b,w,l} %reg, %dx` -- value into the accumulator ($0), port
       // into {dx} ($1), matching the asm string's operand order exactly. The
@@ -720,7 +758,12 @@ void _emitInstruction(DCInstruction instruction, _FunctionEmitter e, {required S
         e.terminate('ret void');
       } else {
         final type = _llvmType(instruction.value!.type, context: context);
-        e.terminate('ret $type %v${instruction.value!.id.index}');
+        if (e.indirectReturn) {
+          e.line('store $type %v${instruction.value!.id.index}, ptr %dc_sret, align 1');
+          e.terminate('ret void');
+        } else {
+          e.terminate('ret $type %v${instruction.value!.id.index}');
+        }
       }
     case Branch():
       e.terminate('br label %${_labelFor(instruction.target)}');
@@ -1135,7 +1178,7 @@ void _emitCall(Call instruction, _FunctionEmitter e, String context) {
     retTypeText: instruction.dest == null
         ? 'void'
         : _llvmType(instruction.dest!.type, context: context),
-    argsText: _argListText(instruction.args, context),
+    argsText: _argListText(instruction.args, context, e),
     dest: instruction.dest,
   );
 }
@@ -1177,14 +1220,22 @@ void _emitIndirectCall(IndirectCall instruction, _FunctionEmitter e, String cont
     e,
     callee: '%v${instruction.callee.id.index}',
     retTypeText: returnType is DCVoid ? 'void' : _llvmType(returnType, context: context),
-    argsText: _argListText(instruction.args, context),
+    argsText: _argListText(instruction.args, context, e),
     dest: instruction.dest,
   );
 }
 
-String _argListText(List<DCValue> args, String context) => args
-    .map((a) => '${_llvmType(a.type, context: context)} %v${a.id.index}')
-    .join(', ');
+String _argListText(List<DCValue> args, String context, _FunctionEmitter e) {
+  return args.map((a) {
+    final type = _llvmType(a.type, context: context);
+    if (_winIndirectAggregate(a.type, e.windowsAbi)) {
+      final slot = e.aggregateSlot(type);
+      e.line('store $type %v${a.id.index}, ptr %$slot, align 16');
+      return 'ptr %$slot';
+    }
+    return '$type %v${a.id.index}';
+  }).join(', ');
+}
 
 /// The ONE place this backend writes an LLVM `call`.
 ///
@@ -1207,7 +1258,14 @@ void _emitCallText(
     e.line('call $retTypeText $callee($argsText)');
     return;
   }
-  e.line('%v${dest.id.index} = call $retTypeText $callee($argsText)');
+  if (_winIndirectAggregate(dest.type, e.windowsAbi)) {
+    final slot = e.aggregateSlot(retTypeText);
+    final args = 'ptr sret($retTypeText) %$slot${argsText.isEmpty ? '' : ', $argsText'}';
+    e.line('call void $callee($args)');
+    e.line('%v${dest.id.index} = load $retTypeText, ptr %$slot, align 16');
+  } else {
+    e.line('%v${dest.id.index} = call $retTypeText $callee($argsText)');
+  }
 }
 
 void declareOverflowIntrinsic(Set<String> declared, String name, String type) {
@@ -2099,7 +2157,19 @@ class _FunctionEmitter {
   _Block? _current;
   int _counter = 0;
 
-  _FunctionEmitter(this.context, this.declaredIntrinsics, this.heapRegionBytes);
+  final bool windowsAbi;
+  final bool indirectReturn;
+  final List<String> entryAllocas = [];
+
+  _FunctionEmitter(this.context, this.declaredIntrinsics, this.heapRegionBytes,
+      {this.windowsAbi = false, this.indirectReturn = false});
+
+  // Allocate once per invocation, never on a loop back edge.
+  String aggregateSlot(String type) {
+    final name = freshName('abi');
+    entryAllocas.add('%$name = alloca $type, align 16');
+    return name;
+  }
 
   String freshName(String prefix) => '$prefix${_counter++}';
   String freshLabel(String prefix) => '$prefix${_counter++}';

@@ -3117,3 +3117,36 @@ after argument evaluation, avoiding destruction of a partially initialized objec
 `tests/conformance/propagate-ownership` checks 3,000 iterations of success/error paths
 through direct/local/indirect calls, constructors, methods and field assignment, with
 zero live objects after each call. Raw/elided ARC counts retain both exit cleanups.
+
+
+## GAP-0077 — Raw and packed loads/stores implicitly promised natural alignment
+
+**Domain:** backend
+**Status:** FIXED in next-release source — backend regression added
+
+LLVM interprets an omitted load/store alignment as ABI alignment. Ordinary and
+volatile pointers can address arbitrary bytes, and packed fields deliberately
+occupy unaligned offsets. Their loads/stores now explicitly use `align 1`;
+LLVM may strengthen that only when it proves better alignment. Atomic operations
+retain natural alignment after their explicit runtime guard. Backend tests failed
+before the fix; the existing packed-struct conformance exercises real byte layout.
+This does not make arbitrary MMIO access widths safe for every device.
+
+
+## GAP-0078 — Windows x64 Result C ABI returned the wrong value
+
+**Domain:** backend, C ABI
+**Status:** FIXED in next-release source; Windows execution must pass CI
+
+Expanding the packaged Windows compiler test to Result propagation reproduced a
+wrong payload with zero live objects. LLVM aggregate returns alone do not implement
+the source-language C ABI: Windows x64 uses a caller-provided return buffer for a
+16-byte structure and pointer arguments for those aggregates.
+
+Definitions, external declarations, direct/indirect calls, parameter entry loads
+and returns now agree on that convention. Scratch slots are allocated in function
+entry blocks, avoiding stack growth when a call occurs in a loop. Other targets
+retain their existing convention. Supported Windows aggregate layouts are the
+current two-word Result/Str forms; other layouts fail explicitly until classified.
+The regression includes C-to-DCDart and DCDart-to-C aggregate arguments/returns,
+plus a call through a function pointer.

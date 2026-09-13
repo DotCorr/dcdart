@@ -54,3 +54,11 @@ class Mutable extends HeapObject {
 @bare u64 weakTake(Weak<Box> weak, u64 n) => n;
 @bare Result weakTemporary(u64 n) => Result.ok(weakTake(Weak<Box>.fromStrong(Box(u64(42))), choose(n).propagate()) + u64(42));
 @bare Result nestedTemporary(u64 n) => Result.ok(take(Box(u64(0)), take(Box(u64(42)), choose(n).propagate())));
+
+@bare Result echoResult(Result value) => value;
+@bare Result indirectResult(u64 n) {
+  final fn = choose;
+  return fn(n);
+}
+@extern external Result cResult(Result value);
+@bare Result externalResult(Result value) => cResult(value);

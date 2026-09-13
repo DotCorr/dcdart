@@ -2,7 +2,11 @@
 #include <stdio.h>
 #include "propagate.h"
 extern uint64_t dc_heap_live;
+Result cResult(Result value) { value.payload += 1; return value; }
 int main(void) {
+  Result input = {1, 96};
+  if (echoResult(input).payload != 96 || externalResult(input).payload != 97) return 6;
+  if (indirectResult(0).payload != 97 || indirectResult(1).payload != 1) return 7;
   for (int i = 0; i < 3000; ++i) {
     for (uint64_t n = 0; n < 2; ++n) {
       if (localCleanup(n).payload != (n ? 43 : 97) || dc_heap_live != 0) {
