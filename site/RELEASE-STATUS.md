@@ -21,3 +21,9 @@ The full suite combines independent freestanding-object checks with native behav
 Homebrew core, WinGet, AUR, npm, pub.dev, crates.io and PyPI are not claimed distribution channels. The working Homebrew tap and Scoop bucket are maintained by DotCorr.
 
 `npm run check:release -- --live` verifies the public tag, native assets, target registry, CLI version, Homebrew/Scoop versions, and archive/bottle checksums before website deployment. The [language audit](../core/docs/language-audit-2026-09-13.md) records remaining safety and feature work; v0.1.3 does not claim to close every language gap.
+
+## Development after v0.1.3
+
+Signed fixed-width integers, guarded signed division, and narrow-integer C ABI
+fixes are being validated in source. They are not yet in the published packages
+or hosted playground. The complete scope remains in `core/docs/gap-closure-plan.md`.

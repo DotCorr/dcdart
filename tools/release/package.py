@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix='dcdart-smoke-') as td:
     exe=temp/('smoke.exe' if windows else 'smoke')
     run(['clang',temp/'host.c',obj,'-o',exe]); run([exe])
 # Exercise the packaged compiler against the release's semantic regressions.
-for suite, source in [('temporary-ownership','temporary'), ('boolean','boolean'), ('propagate-ownership','propagate'), ('null-safety','valid')]:
+for suite, source in [('temporary-ownership','temporary'), ('boolean','boolean'), ('propagate-ownership','propagate'), ('null-safety','valid'), ('signed-int','signed')]:
     case = root/'core/tests/conformance'/suite
     if not case.exists(): continue
     with tempfile.TemporaryDirectory(prefix='dcdart-regression-') as td:
@@ -40,6 +40,7 @@ for suite, source in [('temporary-ownership','temporary'), ('boolean','boolean')
         run([binary,'build','--mode','bare','--target','host',case/(source+'.dart'),'-o',obj,'--emit-header',temp/(source+'.h'),'--prelude',prelude])
         exe=temp/('test.exe' if windows else 'test')
         run(['clang','-I'+str(temp),case/'main.c',obj,'-o',exe]); run([exe])
+        if suite == 'signed-int': run([sys.executable,case/'check-traps.py',exe])
 (stage/'provenance.json').write_text(json.dumps({'tag':tag,'commit':sha,'host':host,'dart':subprocess.check_output([dart,'--version'],text=True).strip(),'validation':'Packaged dcc compiled and linked a C host; sumTo(100) executed and returned 4950.'},indent=2)+'\n')
 archive=Path(shutil.make_archive(str(out/name),'zip' if windows else 'gztar',root_dir=out,base_dir=name))
 (out/(archive.name+'.sha256')).write_text(hashlib.sha256(archive.read_bytes()).hexdigest()+'  '+archive.name+'\n')

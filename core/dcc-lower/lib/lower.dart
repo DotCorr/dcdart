@@ -872,6 +872,14 @@ DCType _lowerFieldType(
       switch (decl.name) {
         case 'u64':
           return DCInt.u64;
+        case 'i8':
+          return DCInt.i8;
+        case 'i16':
+          return DCInt.i16;
+        case 'i32':
+          return DCInt.i32;
+        case 'i64':
+          return DCInt.i64;
         case 'u32':
           return DCInt.u32;
         case 'u16':
@@ -2615,6 +2623,11 @@ class _BareFunctionLowerer {
             'u16' => DCInt.u16,
             'u32' => DCInt.u32,
             'u64' => DCInt.u64,
+            'i8' => DCInt.i8,
+            'i16' => DCInt.i16,
+            'i32' => DCInt.i32,
+            'i64' => DCInt.i64,
+
             _ => null,
           };
           final op = target.name.text.substring(sep + 1);
@@ -2630,6 +2643,15 @@ class _BareFunctionLowerer {
           // inferred `bool` type: under --no-link-platform that type is a
           // real but unbound platform node that crashes on inspection.
           // Same discipline ADR-0014 established for Result.
+          if (widthType != null && op == 'unary-') {
+            final value = _lowerExpression(expr.arguments.positional.single);
+            final zero = DCValue(_allocId(), widthType);
+            final dest = DCValue(_allocId(), widthType);
+            _addInstr(ConstInt(dest: zero, bits: 0));
+            _addInstr(ISub(dest: dest, lhs: zero, rhs: value, overflow: Overflow.trapping));
+            return dest;
+          }
+
           final destType = switch (op) {
             '&' || '|' || '^' || '<<' || '>>' => widthType,
             '+' || '-' || '*' || '~/' || '%' => widthType,
@@ -2637,12 +2659,8 @@ class _BareFunctionLowerer {
             _ => null,
           };
 
-          // Every sized-int type the prelude exposes is UNSIGNED (spec
-          // §4.1's signed i8..i64 have no prelude support yet), so the
-          // unsigned predicates are the correct choice. `llvm_emit` prints
-          // `predicate.name` verbatim and derives NO signedness of its own,
-          // so a signed type landing here later must select the `s`-prefixed
-          // predicates at THIS site, not downstream.
+          // Comparison signedness belongs to the operand type. The backend
+          // prints the chosen predicate verbatim; it cannot infer this later.
           final emit = switch (op) {
             '&' => (DCValue dest, DCValue lhs, DCValue rhs) => _addInstr(IAnd(dest: dest, lhs: lhs, rhs: rhs)),
             '|' => (DCValue dest, DCValue lhs, DCValue rhs) => _addInstr(IOr(dest: dest, lhs: lhs, rhs: rhs)),
@@ -2659,10 +2677,10 @@ class _BareFunctionLowerer {
             // zero divisor, trapped explicitly in the backend (ADR-0036).
             '~/' => (DCValue dest, DCValue lhs, DCValue rhs) => _addInstr(IDiv(dest: dest, lhs: lhs, rhs: rhs)),
             '%' => (DCValue dest, DCValue lhs, DCValue rhs) => _addInstr(IRem(dest: dest, lhs: lhs, rhs: rhs)),
-            '<' => (DCValue dest, DCValue lhs, DCValue rhs) => _addInstr(ICmp(dest: dest, predicate: ICmpPredicate.ult, lhs: lhs, rhs: rhs)),
-            '<=' => (DCValue dest, DCValue lhs, DCValue rhs) => _addInstr(ICmp(dest: dest, predicate: ICmpPredicate.ule, lhs: lhs, rhs: rhs)),
-            '>' => (DCValue dest, DCValue lhs, DCValue rhs) => _addInstr(ICmp(dest: dest, predicate: ICmpPredicate.ugt, lhs: lhs, rhs: rhs)),
-            '>=' => (DCValue dest, DCValue lhs, DCValue rhs) => _addInstr(ICmp(dest: dest, predicate: ICmpPredicate.uge, lhs: lhs, rhs: rhs)),
+            '<' => (DCValue dest, DCValue lhs, DCValue rhs) => _addInstr(ICmp(dest: dest, predicate: widthType?.signed == true ? ICmpPredicate.slt : ICmpPredicate.ult, lhs: lhs, rhs: rhs)),
+            '<=' => (DCValue dest, DCValue lhs, DCValue rhs) => _addInstr(ICmp(dest: dest, predicate: widthType?.signed == true ? ICmpPredicate.sle : ICmpPredicate.ule, lhs: lhs, rhs: rhs)),
+            '>' => (DCValue dest, DCValue lhs, DCValue rhs) => _addInstr(ICmp(dest: dest, predicate: widthType?.signed == true ? ICmpPredicate.sgt : ICmpPredicate.ugt, lhs: lhs, rhs: rhs)),
+            '>=' => (DCValue dest, DCValue lhs, DCValue rhs) => _addInstr(ICmp(dest: dest, predicate: widthType?.signed == true ? ICmpPredicate.sge : ICmpPredicate.uge, lhs: lhs, rhs: rhs)),
             _ => null,
           };
           if (widthType != null && emit != null && destType != null) {
@@ -2678,6 +2696,11 @@ class _BareFunctionLowerer {
             'toU16' => DCInt.u16,
             'toU32' => DCInt.u32,
             'toU64' => DCInt.u64,
+            'toI8' => DCInt.i8,
+            'toI16' => DCInt.i16,
+            'toI32' => DCInt.i32,
+            'toI64' => DCInt.i64,
+
             _ => null,
           };
           if (widthType != null && convertTo != null) {
@@ -2942,6 +2965,11 @@ class _BareFunctionLowerer {
           'u16|constructor#' => DCInt.u16,
           'u32|constructor#' => DCInt.u32,
           'u64|constructor#' => DCInt.u64,
+          'i8|constructor#' => DCInt.i8,
+          'i16|constructor#' => DCInt.i16,
+          'i32|constructor#' => DCInt.i32,
+          'i64|constructor#' => DCInt.i64,
+
           _ => null,
         };
         if (sizedIntType != null) {
@@ -2964,6 +2992,17 @@ class _BareFunctionLowerer {
               'argument must be an integer literal or a compile-time '
               'integer constant',
             );
+          }
+          if (sizedIntType.signed) {
+            final width = switch (sizedIntType.width) {
+              IntWidth.w8 => 8, IntWidth.w16 => 16, IntWidth.w32 => 32,
+              IntWidth.w64 || IntWidth.wSize => 64,
+            };
+            final limit = BigInt.one << (width - 1);
+            final literal = BigInt.from(bits);
+            if (literal < -limit || literal >= limit) {
+              throw DccLowerError('"$context": $bits is outside the range of $sizedIntType');
+            }
           }
           final dest = DCValue(_allocId(), sizedIntType);
           _addInstr(ConstInt(dest: dest, bits: bits));
@@ -4921,6 +4960,14 @@ DCType _lowerSignatureType(
         switch (decl.name) {
           case 'u64':
             return DCInt.u64;
+          case 'i8':
+            return DCInt.i8;
+          case 'i16':
+            return DCInt.i16;
+          case 'i32':
+            return DCInt.i32;
+          case 'i64':
+            return DCInt.i64;
           case 'u32':
             return DCInt.u32;
           case 'u16':
@@ -5260,6 +5307,14 @@ DCInt? _sizedIntOf(DartType declared) {
         return DCInt.u32;
       case 'u64':
         return DCInt.u64;
+      case 'i8':
+        return DCInt.i8;
+      case 'i16':
+        return DCInt.i16;
+      case 'i32':
+        return DCInt.i32;
+      case 'i64':
+        return DCInt.i64;
     }
   }
   return null;
@@ -5351,6 +5406,10 @@ int? _tryFoldConstInt(Expression expr) {
   }
   if (expr is InstanceInvocation) {
     final args = expr.arguments.positional;
+    if (args.isEmpty && expr.name.text == 'unary-') {
+      final value = _tryFoldConstInt(expr.receiver);
+      return value == null ? null : -value;
+    }
     if (args.length != 1) return null;
     final lhs = _tryFoldConstInt(expr.receiver);
     final rhs = _tryFoldConstInt(args.single);
@@ -5895,6 +5954,14 @@ DCInt? _rodataElementType(DartType declared, String name) {
           return DCInt.u32;
         case 'u64':
           return DCInt.u64;
+        case 'i8':
+          return DCInt.i8;
+        case 'i16':
+          return DCInt.i16;
+        case 'i32':
+          return DCInt.i32;
+        case 'i64':
+          return DCInt.i64;
       }
     }
   }

@@ -49,7 +49,7 @@ For each open safety issue: preserve a failing source/C regression, implement th
 | [GAP-0033](known-gaps.md) | Historical resolution / partial resolution | `volatile` prevents elision and reordering, but there are no memory BARRIERS |
 | [GAP-0044](known-gaps.md) | Open or partial language/ABI feature | Fences exist; a memory-ordering MODEL does not, and atomics are seq_cst-only |
 | [GAP-0043](known-gaps.md) | Historical resolution / partial resolution | The fences are currently redundant with `volatile`, so their ordering property is untestable |
-| [GAP-0042](known-gaps.md) | Open safety issue | Atomic alignment is neither checked nor representable |
+| [GAP-0042](known-gaps.md) | Fixed in v0.1.3 / runtime regression | Atomic alignment is checked before every multi-byte atomic operation |
 | [GAP-0041](known-gaps.md) | Open or partial language/ABI feature | No compare-exchange, because DC-IR has no multi-result instruction |
 | [GAP-0031](known-gaps.md) | Historical resolution / partial resolution | `@rodata` emitted homogeneous ARRAYS only, so a type descriptor's STRUCT was inexpressible |
 | [GAP-0030](known-gaps.md) | Open safety issue | A `Store` into read-only static data is not prevented, and on the freestanding target it corrupts silently |
@@ -111,3 +111,5 @@ For each open safety issue: preserve a failing source/C regression, implement th
   aggregate-argument convention; native Windows packaged-compiler CI passed.
 
 Final native release evidence: [run 34786871909](https://github.com/DotCorr/dcdart/actions/runs/34786871909), compiler source `e8c5c4be8607e092b7322f29ac46ae7cdfcd535f`. Windows executes the propagation/aggregate interoperability regression; the full 54-suite count applies to macOS ARM64 and Linux x86-64/ARM64. The v0.1.3 source passed 12 backend tests and 52 optimizer tests in CI.
+
+Full remaining scope and verification checklist: [gap-closure-plan.md](gap-closure-plan.md).

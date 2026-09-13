@@ -461,6 +461,13 @@ the example both say so in a comment rather than leaving it as a trap. Any C API
 sentinel is currently un-declarable correctly. Fixing it is prelude + `_lowerSignatureType` work, not
 a backend change — `DCInt.signed` is already threaded through.
 
+
+**2026-09-14 implementation update:** i8/i16/i32/i64 and signed division/remainder
+are implemented in development with MIN/-1 and zero guards. See ADR-0077 and
+`signed-int`. Native and both freestanding regressions are being verified; the
+entry remains open until cross-platform C interoperability and all recorded
+subrequirements are checked. This is not in published v0.1.3.
+
 ---
 
 ## GAP-0032 — `dcc` never passes an optimization flag, so every DCDart program ships `-O0` code
@@ -1436,6 +1443,13 @@ later cannot silently inherit codegen that is wrong in one corner.
 change — as must the signed comparison predicates (ADR-0035 selects `ult`/`ule`/`ugt`/`uge`
 unconditionally at the recognition site in `dcc-lower`, NOT in the backend, so that is the place that
 has to learn about signedness). Both failures would be silent.
+
+
+**2026-09-14 implementation update:** i8/i16/i32/i64 and signed division/remainder
+are implemented in development with MIN/-1 and zero guards. See ADR-0077 and
+`signed-int`. Native and both freestanding regressions are being verified; the
+entry remains open until cross-platform C interoperability and all recorded
+subrequirements are checked. This is not in published v0.1.3.
 
 ---
 

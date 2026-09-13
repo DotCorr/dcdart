@@ -189,9 +189,12 @@ String emitModule(
   final declaredIntrinsics = <String>{};
   final windowsAbi = targetTriple?.startsWith('x86_64-') == true &&
       targetTriple!.contains('windows');
+  final narrowAbi = targetTriple != null &&
+      (targetTriple.contains('apple') || targetTriple.startsWith('wasm32-') ||
+       (targetTriple.startsWith('x86_64-') && !windowsAbi));
   final functionBuffers = <String>[];
   for (final function in module.functions) {
-    functionBuffers.add(_emitFunction(function, declaredIntrinsics, regionBytes, windowsAbi));
+    functionBuffers.add(_emitFunction(function, declaredIntrinsics, regionBytes, windowsAbi, narrowAbi));
   }
 
   // Every instruction that touches heap storage must be listed here, not
@@ -286,7 +289,7 @@ String emitModule(
   // are already passed to clang, compile.dart) and keeps the IR honest.
   if (module.externFunctions.isNotEmpty) {
     for (final extern in module.externFunctions) {
-      buffer.writeln(_emitExternDeclaration(extern, windowsAbi));
+      buffer.writeln(_emitExternDeclaration(extern, windowsAbi, narrowAbi));
     }
     buffer.writeln();
   }
@@ -324,15 +327,23 @@ bool _winIndirectAggregate(DCType type, bool windowsAbi) {
   return true;
 }
 
-String _emitExternDeclaration(DCExternFunction extern, bool windowsAbi) {
+String _integerExtension(DCType type, bool narrowAbi) {
+  if (narrowAbi && type is DCInt &&
+      (type.width == IntWidth.w8 || type.width == IntWidth.w16)) {
+    return type.signed ? 'signext ' : 'zeroext ';
+  }
+  return '';
+}
+
+String _emitExternDeclaration(DCExternFunction extern, bool windowsAbi, bool narrowAbi) {
   final indirect = _winIndirectAggregate(extern.returnType, windowsAbi);
   final retType = _llvmType(extern.returnType, context: extern.linkName);
   final params = <String>[
     if (indirect) 'ptr sret($retType)',
     for (final t in extern.paramTypes)
-      _winIndirectAggregate(t, windowsAbi) ? 'ptr' : _llvmType(t, context: extern.linkName),
+      _winIndirectAggregate(t, windowsAbi) ? 'ptr' : '${_llvmType(t, context: extern.linkName)} ${_integerExtension(t, narrowAbi)}'.trim(),
   ].join(', ');
-  return 'declare ${indirect ? 'void' : retType} @${extern.linkName}($params)';
+  return 'declare ${indirect ? 'void' : '${_integerExtension(extern.returnType, narrowAbi)}$retType'} @${extern.linkName}($params)';
 }
 
 /// LLVM label for a DC-IR block. Block 0 keeps the "entry" label M0/M1's
@@ -395,6 +406,7 @@ String _emitFunction(
   Set<String> declaredIntrinsics,
   int heapRegionBytes,
   bool windowsAbi,
+  bool narrowAbi,
 ) {
   final entryBlock = function.blocks.first;
   final retType = _llvmType(function.returnType, context: function.linkName);
@@ -408,11 +420,11 @@ String _emitFunction(
     for (final v in entryBlock.params)
       _winIndirectAggregate(v.type, windowsAbi)
           ? 'ptr %arg${v.id.index}'
-          : '${_llvmType(v.type, context: function.linkName)} %v${v.id.index}',
+          : '${_llvmType(v.type, context: function.linkName)} ${_integerExtension(v.type, narrowAbi)}%v${v.id.index}',
   ].join(', ');
 
   final emitter = _FunctionEmitter(function.linkName, declaredIntrinsics, heapRegionBytes,
-      windowsAbi: windowsAbi, indirectReturn: indirectReturn);
+      windowsAbi: windowsAbi, narrowAbi: narrowAbi, indirectReturn: indirectReturn);
 
   // Pass 1: emit every block's real instructions (NOT phi lines yet — see
   // `_collectPredecessors`'s doc comment for why the real predecessor label
@@ -463,7 +475,7 @@ String _emitFunction(
   // against a plain C caller needs (m0-target.md §1's "no `dso_local`" and
   // "no `ccc` keyword needed" notes).
   emitter.prependToLabel(_labelFor(entryBlock.id), emitter.entryAllocas);
-  buffer.writeln('define ${indirectReturn ? 'void' : retType} @${function.linkName}($params) #0 {');
+  buffer.writeln('define ${indirectReturn ? 'void' : '${_integerExtension(function.returnType, narrowAbi)}$retType'} @${function.linkName}($params) #0 {');
   buffer.write(emitter.render());
   buffer.writeln('}');
   return buffer.toString();
@@ -893,25 +905,24 @@ void _emitDivRem(
   }
   final type = _llvmType(destType, context: context);
 
-  // Signed division has a SECOND trapping case beyond a zero divisor:
-  // INT_MIN / -1 overflows and is UB in LLVM too. Every sized-int type the
-  // prelude exposes today is unsigned, so that path is unreachable; it is
-  // rejected outright rather than emitted without its guard, so a future
-  // signed type cannot silently inherit incorrect codegen (GAP-0024).
-  if (destType.signed) {
-    throw BackendError(
-      '"$context": signed $kind is not implemented. It needs an INT_MIN/-1 '
-      'overflow guard in addition to the zero-divisor trap (see '
-      'docs/known-gaps.md GAP-0024); emitting it without one would be UB.',
-    );
-  }
-
   final isZero = e.freshName('divzero');
   final trapLabel = e.freshLabel('divtrap');
   final okLabel = e.freshLabel('divok');
 
   e.line('%$isZero = icmp eq $type %v${rhs.id.index}, 0');
-  e.terminate('br i1 %$isZero, label %$trapLabel, label %$okLabel');
+  var invalid = isZero;
+  if (destType.signed) {
+    final isMin = e.freshName('divmin');
+    final isMinusOne = e.freshName('divminusone');
+    final overflow = e.freshName('divoverflow');
+    invalid = e.freshName('divinvalid');
+    final minimum = -(BigInt.one << (_intBits(destType, context: context) - 1));
+    e.line('%$isMin = icmp eq $type %v${lhs.id.index}, $minimum');
+    e.line('%$isMinusOne = icmp eq $type %v${rhs.id.index}, -1');
+    e.line('%$overflow = and i1 %$isMin, %$isMinusOne');
+    e.line('%$invalid = or i1 %$isZero, %$overflow');
+  }
+  e.terminate('br i1 %$invalid, label %$trapLabel, label %$okLabel');
 
   e.startBlock(trapLabel);
   declareTrapIntrinsic(e.declaredIntrinsics);
@@ -922,7 +933,7 @@ void _emitDivRem(
   // non-zero divisor -- unlike _emitArith, where the value is computed
   // BEFORE the branch and the trap only rejects it afterwards.
   e.startBlock(okLabel);
-  final op = kind == 'div' ? 'udiv' : 'urem';
+  final op = '${destType.signed ? 's' : 'u'}${kind == 'div' ? 'div' : 'rem'}';
   e.line('%v${dest.id.index} = $op $type %v${lhs.id.index}, %v${rhs.id.index}');
 }
 
@@ -1233,7 +1244,7 @@ String _argListText(List<DCValue> args, String context, _FunctionEmitter e) {
       e.line('store $type %v${a.id.index}, ptr %$slot, align 16');
       return 'ptr %$slot';
     }
-    return '$type %v${a.id.index}';
+    return '$type ${_integerExtension(a.type, e.narrowAbi)}%v${a.id.index}';
   }).join(', ');
 }
 
@@ -1264,7 +1275,7 @@ void _emitCallText(
     e.line('call void $callee($args)');
     e.line('%v${dest.id.index} = load $retTypeText, ptr %$slot, align 16');
   } else {
-    e.line('%v${dest.id.index} = call $retTypeText $callee($argsText)');
+    e.line('%v${dest.id.index} = call ${_integerExtension(dest.type, e.narrowAbi)}$retTypeText $callee($argsText)');
   }
 }
 
@@ -2158,11 +2169,12 @@ class _FunctionEmitter {
   int _counter = 0;
 
   final bool windowsAbi;
+  final bool narrowAbi;
   final bool indirectReturn;
   final List<String> entryAllocas = [];
 
   _FunctionEmitter(this.context, this.declaredIntrinsics, this.heapRegionBytes,
-      {this.windowsAbi = false, this.indirectReturn = false});
+      {this.windowsAbi = false, this.narrowAbi = false, this.indirectReturn = false});
 
   // Allocate once per invocation, never on a loop back edge.
   String aggregateSlot(String type) {

@@ -187,6 +187,10 @@ extension type const u64(int _value) {
   /// deliberately absent until something needs it (same discipline as
   /// every other prelude member).
   f64 toF64() => f64(_value.toDouble());
+  i8 toI8() => i8(_value);
+  i16 toI16() => i16(_value);
+  i32 toI32() => i32(_value);
+  i64 toI64() => i64(_value);
 }
 
 /// u32 (DCDART_SPEC.md §4.1). Added for M1's `Pointer<u32>` exit criterion
@@ -255,6 +259,10 @@ extension type const u32(int _value) {
   /// here rather than discovered. See u64.toF64 for why only this one
   /// pairing exists per width.
   f32 toF32() => f32(_value.toDouble());
+  i8 toI8() => i8(_value);
+  i16 toI16() => i16(_value);
+  i32 toI32() => i32(_value);
+  i64 toI64() => i64(_value);
 }
 
 /// u8 (DCDART_SPEC.md §4.1). Added for M1's `@packed` struct exit criterion
@@ -316,6 +324,10 @@ extension type const u8(int _value) {
   u16 toU16() => u16(_value);
   u32 toU32() => u32(_value);
   u64 toU64() => u64(_value);
+  i8 toI8() => i8(_value);
+  i16 toI16() => i16(_value);
+  i32 toI32() => i32(_value);
+  i64 toI64() => i64(_value);
 }
 
 /// u16 (DCDART_SPEC.md §4.1). Added for `Port.outb`/`Port.inb` below
@@ -381,6 +393,10 @@ extension type const u16(int _value) {
   u16 toU16() => u16(_value);
   u32 toU32() => u32(_value);
   u64 toU64() => u64(_value);
+  i8 toI8() => i8(_value);
+  i16 toI16() => i16(_value);
+  i32 toI32() => i32(_value);
+  i64 toI64() => i64(_value);
 }
 
 /// f64 (DCDART_SPEC.md §4.1, ADR-0065): IEEE-754 binary64. Added for
@@ -1141,4 +1157,112 @@ class Heap {
   /// next two allocations of that class return the same address.
   static void free(Pointer<u8> block) =>
       throw UnimplementedError('dcc-lower substitutes real codegen for this');
+}
+
+/// Signed fixed-width integers. Arithmetic and negation trap on overflow.
+/// Division truncates toward zero; remainder has the dividend's sign (C ABI
+/// arithmetic), unlike Dart int's Euclidean modulo. Width conversions retain
+/// low bits when narrowing and sign-extend signed sources when widening.
+extension type const i8(int _value) {
+  i8 operator +(i8 other) => i8(_value + other._value);
+  i8 operator -(i8 other) => i8(_value - other._value);
+  i8 operator *(i8 other) => i8(_value * other._value);
+  i8 operator ~/(i8 other) => i8(_value ~/ other._value);
+  i8 operator &(i8 other) => i8(_value & other._value);
+  i8 operator |(i8 other) => i8(_value | other._value);
+  i8 operator ^(i8 other) => i8(_value ^ other._value);
+  i8 operator <<(i8 other) => i8(_value << other._value);
+  i8 operator >>(i8 other) => i8(_value >> other._value);
+  i8 operator %(i8 other) => i8(_value.remainder(other._value));
+  i8 operator -() => i8(-_value);
+  bool operator <(i8 other) => _value < other._value;
+  bool operator <=(i8 other) => _value <= other._value;
+  bool operator >(i8 other) => _value > other._value;
+  bool operator >=(i8 other) => _value >= other._value;
+  i8 toI8() => i8(_value);
+  i16 toI16() => i16(_value);
+  i32 toI32() => i32(_value);
+  i64 toI64() => i64(_value);
+  u8 toU8() => u8(_value);
+  u16 toU16() => u16(_value);
+  u32 toU32() => u32(_value);
+  u64 toU64() => u64(_value);
+}
+
+extension type const i16(int _value) {
+  i16 operator +(i16 other) => i16(_value + other._value);
+  i16 operator -(i16 other) => i16(_value - other._value);
+  i16 operator *(i16 other) => i16(_value * other._value);
+  i16 operator ~/(i16 other) => i16(_value ~/ other._value);
+  i16 operator &(i16 other) => i16(_value & other._value);
+  i16 operator |(i16 other) => i16(_value | other._value);
+  i16 operator ^(i16 other) => i16(_value ^ other._value);
+  i16 operator <<(i16 other) => i16(_value << other._value);
+  i16 operator >>(i16 other) => i16(_value >> other._value);
+  i16 operator %(i16 other) => i16(_value.remainder(other._value));
+  i16 operator -() => i16(-_value);
+  bool operator <(i16 other) => _value < other._value;
+  bool operator <=(i16 other) => _value <= other._value;
+  bool operator >(i16 other) => _value > other._value;
+  bool operator >=(i16 other) => _value >= other._value;
+  i8 toI8() => i8(_value);
+  i16 toI16() => i16(_value);
+  i32 toI32() => i32(_value);
+  i64 toI64() => i64(_value);
+  u8 toU8() => u8(_value);
+  u16 toU16() => u16(_value);
+  u32 toU32() => u32(_value);
+  u64 toU64() => u64(_value);
+}
+
+extension type const i32(int _value) {
+  i32 operator +(i32 other) => i32(_value + other._value);
+  i32 operator -(i32 other) => i32(_value - other._value);
+  i32 operator *(i32 other) => i32(_value * other._value);
+  i32 operator ~/(i32 other) => i32(_value ~/ other._value);
+  i32 operator &(i32 other) => i32(_value & other._value);
+  i32 operator |(i32 other) => i32(_value | other._value);
+  i32 operator ^(i32 other) => i32(_value ^ other._value);
+  i32 operator <<(i32 other) => i32(_value << other._value);
+  i32 operator >>(i32 other) => i32(_value >> other._value);
+  i32 operator %(i32 other) => i32(_value.remainder(other._value));
+  i32 operator -() => i32(-_value);
+  bool operator <(i32 other) => _value < other._value;
+  bool operator <=(i32 other) => _value <= other._value;
+  bool operator >(i32 other) => _value > other._value;
+  bool operator >=(i32 other) => _value >= other._value;
+  i8 toI8() => i8(_value);
+  i16 toI16() => i16(_value);
+  i32 toI32() => i32(_value);
+  i64 toI64() => i64(_value);
+  u8 toU8() => u8(_value);
+  u16 toU16() => u16(_value);
+  u32 toU32() => u32(_value);
+  u64 toU64() => u64(_value);
+}
+
+extension type const i64(int _value) {
+  i64 operator +(i64 other) => i64(_value + other._value);
+  i64 operator -(i64 other) => i64(_value - other._value);
+  i64 operator *(i64 other) => i64(_value * other._value);
+  i64 operator ~/(i64 other) => i64(_value ~/ other._value);
+  i64 operator &(i64 other) => i64(_value & other._value);
+  i64 operator |(i64 other) => i64(_value | other._value);
+  i64 operator ^(i64 other) => i64(_value ^ other._value);
+  i64 operator <<(i64 other) => i64(_value << other._value);
+  i64 operator >>(i64 other) => i64(_value >> other._value);
+  i64 operator %(i64 other) => i64(_value.remainder(other._value));
+  i64 operator -() => i64(-_value);
+  bool operator <(i64 other) => _value < other._value;
+  bool operator <=(i64 other) => _value <= other._value;
+  bool operator >(i64 other) => _value > other._value;
+  bool operator >=(i64 other) => _value >= other._value;
+  i8 toI8() => i8(_value);
+  i16 toI16() => i16(_value);
+  i32 toI32() => i32(_value);
+  i64 toI64() => i64(_value);
+  u8 toU8() => u8(_value);
+  u16 toU16() => u16(_value);
+  u32 toU32() => u32(_value);
+  u64 toU64() => u64(_value);
 }
