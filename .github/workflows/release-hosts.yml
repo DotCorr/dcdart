@@ -2,7 +2,7 @@ name: Verify additional release hosts
 on:
   push:
     branches: [codex/dcdart-web-playground]
-    paths: ['tools/release/**', '.github/workflows/release-hosts.yml']
+    paths: ['tools/release/**', 'core/scripts/vendor-frontend.sh', '.github/workflows/release-hosts.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,7 +33,9 @@ jobs:
           echo /usr/lib/llvm-18/bin >> "$GITHUB_PATH"
       - name: Restore pinned frontend
         shell: bash
-        run: bash release-src/core/scripts/vendor-frontend.sh
+        run: |
+          cp core/scripts/vendor-frontend.sh release-src/core/scripts/vendor-frontend.sh
+          bash release-src/core/scripts/vendor-frontend.sh
       - name: Build packaged compiler and execute native smoke test
         run: python tools/release/package.py release-src dist
       - uses: actions/upload-artifact@v4

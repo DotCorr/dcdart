@@ -189,8 +189,14 @@ if command -v dart >/dev/null 2>&1; then
   echo "vendor-frontend: proving the toolchain can COMPILE, not just resolve"
   SMOKE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/dcdart-smoke.XXXXXX")" \
     || die "could not create a temp dir for the build proof"
+  PRELUDE_IMPORT="$CORE_DIR/runtime/dc-core-bare/prelude.dart"
+  # Git Bash paths (/c/...) are not Windows Dart file paths. Use a file URI
+  # for the source import while keeping native CLI path conversion intact.
+  if command -v cygpath >/dev/null 2>&1; then
+    PRELUDE_IMPORT="file:///$(cygpath -m "$PRELUDE_IMPORT")"
+  fi
   cat > "$SMOKE_DIR/smoke.dart" <<SMOKE
-import '$CORE_DIR/runtime/dc-core-bare/prelude.dart';
+import '$PRELUDE_IMPORT';
 
 @bare u64 smokeAdd(u64 a, u64 b) => a + b;
 SMOKE
