@@ -39,6 +39,10 @@ import '../lib/cli_args.dart';
 import '../lib/pipeline.dart';
 
 Future<void> main(List<String> argv) async {
+  if (argv.length == 1 && argv.single == '--version') {
+    stdout.writeln('dcc 0.1.1');
+    return;
+  }
   final BuildOptions options;
   try {
     options = parseArgs(argv);

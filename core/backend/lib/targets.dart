@@ -58,7 +58,7 @@ enum TargetArch {
 /// The OS the object file is destined for. `none` is the freestanding
 /// bare-metal case (`x86_64-unknown-none-elf`, M0's original target) —
 /// no OS, no libc, no dynamic loader.
-enum TargetOs { none, linux, macos, windows }
+enum TargetOs { none, linux, macos, windows, ios, android }
 
 /// A compilation target: an LLVM triple plus the facts about it that the
 /// compiler needs to make decisions.
@@ -170,6 +170,30 @@ class DCTarget {
     alias: 'macos-arm64',
   );
 
+  static const iosArm64 = DCTarget(
+    triple: 'arm64-apple-ios16.0',
+    arch: TargetArch.aarch64,
+    os: TargetOs.ios,
+    objectFormat: ObjectFormat.machO,
+    alias: 'ios-arm64',
+  );
+
+  static const iosSimulatorArm64 = DCTarget(
+    triple: 'arm64-apple-ios16.0-simulator',
+    arch: TargetArch.aarch64,
+    os: TargetOs.ios,
+    objectFormat: ObjectFormat.machO,
+    alias: 'ios-simulator-arm64',
+  );
+
+  static const androidArm64 = DCTarget(
+    triple: 'aarch64-linux-android26',
+    arch: TargetArch.aarch64,
+    os: TargetOs.android,
+    objectFormat: ObjectFormat.elf,
+    alias: 'android-arm64',
+  );
+
   static const windowsX86_64 = DCTarget(
     triple: 'x86_64-pc-windows-msvc',
     arch: TargetArch.x86_64,
@@ -197,6 +221,9 @@ class DCTarget {
     macosAarch64,
     windowsX86_64,
     windowsAarch64,
+    iosArm64,
+    iosSimulatorArm64,
+    androidArm64,
   ];
 
   /// The target used when `--target` is omitted.
