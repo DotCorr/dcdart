@@ -133,3 +133,6 @@ is not completion when the requirement is to implement that feature.
 
 - Pointer control flow (GAP-0080): walking cursors and alternating callbacks
   pass locally; callback ownership changes remain rejected.
+
+- Remaining syntax refusals (GAP-0037): unconditional for loops and direct
+  loop returns implemented; body cleanup and nested exit regressions added.

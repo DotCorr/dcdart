@@ -1994,18 +1994,11 @@ class _BareFunctionLowerer {
   /// locals (ADR-0048) all apply unchanged. A second loop lowering would have
   /// meant re-deriving every one of those and getting one subtly different.
   void _lowerFor(ForStatement stmt, {LabeledStatement? breakLabel}) {
-    if (stmt.condition == null) {
-      throw DccLowerError(
-        '"$context": `for (;;)` with no condition is not supported -- the '
-        'desugaring needs a condition expression, and an always-true loop '
-        'has no target that has been tested',
-      );
-    }
     for (final v in stmt.variables) {
       _lowerStatement(v);
     }
     _lowerWhile(
-      WhileStatement(stmt.condition!, stmt.body),
+      WhileStatement(stmt.condition ?? BoolLiteral(true), stmt.body),
       breakLabel: breakLabel,
       updates: [for (final u in stmt.updates) ExpressionStatement(u)],
     );
@@ -2098,9 +2091,14 @@ class _BareFunctionLowerer {
       for (final v in loopVars) DCValue(_allocId(), _values[v]!.type),
     ];
     final condExitArgs = [for (final v in loopVars) _values[v]!];
-    _addInstr(
-      CondBranch(cond: cond, trueTarget: bodyBlockId, trueArgs: const [], falseTarget: exitBlockId, falseArgs: condExitArgs),
-    );
+    final alwaysTrue = stmt.condition is BoolLiteral &&
+        (stmt.condition as BoolLiteral).value;
+    if (alwaysTrue) {
+      _addInstr(Branch(target: bodyBlockId, args: const []));
+    } else {
+      _addInstr(CondBranch(cond: cond, trueTarget: bodyBlockId,
+          trueArgs: const [], falseTarget: exitBlockId, falseArgs: condExitArgs));
+    }
     _finishBlock();
 
     // THE BODY SCOPE MARK, and the whole per-iteration release policy hangs
@@ -2142,6 +2140,10 @@ class _BareFunctionLowerer {
     // Unwrap the continue-label if present: it was registered above, and
     // what actually needs lowering is the statement inside it.
     _lowerBranchBody(body is LabeledStatement ? body.body : body);
+    if (_blockOpen && _currentInstructions.isNotEmpty &&
+        _currentInstructions.last is DCTerminator) {
+      _finishBlock();
+    }
     // Only wire the back edge if some path through the body still falls
     // through (_blockOpen) — a body where every path returns has no
     // reachable back edge at all, which is a legal (if degenerate) program:
@@ -2186,7 +2188,7 @@ class _BareFunctionLowerer {
     // The update block: lower the update expressions, then close the loop.
     // Its parameters carry the loop variables in, because `continue` may
     // branch here from anywhere in the body with different values.
-    if (updateBlockId != null) {
+    if (updateBlockId != null && _hasIncomingEdge(updateBlockId)) {
       final updateParams = [
         for (final v in loopVars) DCValue(_allocId(), _values[v]!.type),
       ];
@@ -2210,11 +2212,22 @@ class _BareFunctionLowerer {
     // parameters, not the header's. The header's params were correct while
     // the exit had a single predecessor; now that a `break` can reach it
     // with different values, only a real phi at the exit is right.
+    if (!_hasIncomingEdge(exitBlockId)) return;
     _startBlock(exitBlockId, exitParams);
     for (var i = 0; i < loopVars.length; i++) {
       _values[loopVars[i]] = exitParams[i];
     }
   }
+
+  bool _hasIncomingEdge(BlockId target) => _finishedBlocks.any((block) {
+    final last = block.body.last;
+    if (last is Branch) return last.target.index == target.index;
+    if (last is CondBranch) {
+      return last.trueTarget.index == target.index ||
+          last.falseTarget.index == target.index;
+    }
+    return false;
+  });
 
   /// Pure Kernel-IR-AST walk collecting every `VariableSet` target
   /// reachable inside `stmt` (recursing into `Block` and `IfStatement`'s

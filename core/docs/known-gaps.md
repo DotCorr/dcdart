@@ -669,6 +669,12 @@ future defense must distinguish that boundary issue from source-level flow check
 
 ## GAP-0037 — Every "not supported yet" refusal in `dcc-lower` deserves re-examination; at least one was already safe
 
+**Development update (ADR-0087):** for loops with omitted conditions now work.
+Tests also exposed and fixed false exits and instructions appended after direct
+loop returns. Return/break/continue cleanup and nested labeled exits are covered;
+this is progress on the refusal audit, not closure of its remaining cases.
+
+
 **Domain:** dcc-lower (process, not a single defect)
 **Status:** OPEN — one instance found and fixed (ADR-0044), the rest unaudited
 
