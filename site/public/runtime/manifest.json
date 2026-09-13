@@ -1,0 +1,251 @@
+{
+  "version": 1,
+  "compilerCommit": "4b810d4a6166ea2b8bed722712050484de6ea1fa",
+  "dartVersion": "Dart SDK version: 3.12.2 (stable) (Tue Jun 9 01:11:39 2026 -0700) on \"macos_arm64\"",
+  "clangVersion": "Homebrew clang version 22.1.8",
+  "compilerHashes": {
+    "core/dcc-lower/lib/lower.dart": "0efd2183835258f9ad1ded83d1e72598e90da5b96f5fc1823235f0077041f2f6",
+    "core/backend/lib/llvm_emit.dart": "673142e897f04e347fae3c3d6246e3eaee64f3706e8818019650d6ee0fcca8dd",
+    "core/runtime/dc-core-bare/prelude.dart": "67c6054f5c6d19c10baaa7023a2a3ddfa93687b7f79de2e4f6575c1865b47989"
+  },
+  "execution": "Ahead-of-time DCDart → Kernel IR → DC-IR → LLVM → WebAssembly. Source compilation happens at build time; inputs execute locally in a browser worker.",
+  "demos": [
+    {
+      "id": "loop",
+      "title": "Count it up",
+      "label": "01 / Loops",
+      "path": "m2-loop/loop.dart",
+      "description": "A while loop, two fixed-width integers, and a running total. Sum every integer from zero up to (but excluding) n.",
+      "functions": [
+        {
+          "name": "sumTo",
+          "args": [
+            {
+              "name": "n",
+              "type": "u64",
+              "value": "100"
+            }
+          ],
+          "result": "u64"
+        },
+        {
+          "name": "firstAtLeast",
+          "args": [
+            {
+              "name": "n",
+              "type": "u64",
+              "value": "100"
+            },
+            {
+              "name": "threshold",
+              "type": "u64",
+              "value": "1000"
+            }
+          ],
+          "result": "u64"
+        }
+      ],
+      "source": "import '../../runtime/dc-core-bare/prelude.dart';\n\n@bare\nu64 sumTo(u64 n) {\n  var i = u64(0);\n  var total = u64(0);\n  while (i < n) {\n    total = total + i;\n    i = i + u64(1);\n  }\n  return total;\n}\n\n@bare\nu64 firstAtLeast(u64 n, u64 threshold) {\n  var i = u64(0);\n  var total = u64(0);\n  while (i < n) {\n    total = total + i;\n    if (threshold < total) {\n      return i;\n    }\n    i = i + u64(1);\n  }\n  return i;\n}",
+      "hasHeap": false,
+      "bytes": 480,
+      "sha256": "42ef4136388ad22811c87c6138aa4e607ad9f237bc87287d811ddae2bd7cb70c",
+      "sourceSha256": "59c90d6b1ccd54debc59d985239635dc04dba54f47f69200b7a5c72c63ef8e7e",
+      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/4b810d4a6166ea2b8bed722712050484de6ea1fa/core/examples/m2-loop/loop.dart"
+    },
+    {
+      "id": "collatz",
+      "title": "A little unpredictability",
+      "label": "02 / ARC + control flow",
+      "path": "demo-collatz/collatz.dart",
+      "description": "Follow the Collatz sequence, or sum the steps through a heap-allocated counter. The compiled DCDart code allocates, updates, and releases that object.",
+      "functions": [
+        {
+          "name": "sumCollatzSteps",
+          "args": [
+            {
+              "name": "upTo",
+              "type": "u64",
+              "value": "1000"
+            }
+          ],
+          "result": "u64"
+        },
+        {
+          "name": "collatzSteps",
+          "args": [
+            {
+              "name": "start",
+              "type": "u64",
+              "value": "27"
+            }
+          ],
+          "result": "u64"
+        }
+      ],
+      "source": "import '../../runtime/dc-core-bare/prelude.dart';\n\nclass StepCounter extends HeapObject {\n  u64 total;\n  StepCounter(this.total);\n}\n\n@bare\nu64 collatzSteps(u64 start) {\n  var n = start;\n  var steps = u64(0);\n  while (u64(1) < n) {\n    if ((n & u64(1)) < u64(1)) {\n      n = n >> u64(1); // even\n    } else {\n      n = n + n + n + u64(1); // odd: 3n + 1\n    }\n    steps = steps + u64(1);\n  }\n  return steps;\n}\n\n@bare\nu64 sumCollatzSteps(u64 upTo) {\n  var counter = StepCounter(u64(0));\n  var i = u64(1);\n  while (i < upTo + u64(1)) {\n    counter.total = counter.total + collatzSteps(i);\n    i = i + u64(1);\n  }\n  return counter.total;\n}",
+      "hasHeap": true,
+      "bytes": 887,
+      "sha256": "fe190ec8910e8a724f635b29a50f5d7a84d9a47afa1c0396afb90a31c8477620",
+      "sourceSha256": "86df2630b730352af60b415e97d8de492e06165e920edfe2c405c07d7510a2b9",
+      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/4b810d4a6166ea2b8bed722712050484de6ea1fa/core/examples/demo-collatz/collatz.dart"
+    },
+    {
+      "id": "recursion",
+      "title": "Down the call stack",
+      "label": "03 / Recursion",
+      "path": "m2-recursion/recursion.dart",
+      "description": "Allocate a box in each recursive call. Read its value and let DCDart’s generated ARC code release it. The live-allocation count should return to zero.",
+      "functions": [
+        {
+          "name": "sumBoxValues",
+          "args": [
+            {
+              "name": "n",
+              "type": "u64",
+              "value": "100"
+            }
+          ],
+          "result": "u64"
+        }
+      ],
+      "source": "import '../../runtime/dc-core-bare/prelude.dart';\n\nclass Box extends HeapObject {\n  final u64 value;\n  const Box(this.value);\n}\n\n@bare\nu64 sumBoxValues(u64 n) {\n  if (n < u64(1)) {\n    return u64(0);\n  }\n  final b = Box(n);\n  final v = b.value;\n  return v + sumBoxValues(n - u64(1));\n}",
+      "hasHeap": true,
+      "bytes": 622,
+      "sha256": "d443485d870faf3ad2af4bddafe8549dd6bb52f18da3ff1403689896eca9c21e",
+      "sourceSha256": "8eeba2c730cdfa876a118f640622efbe8413645b7e6d341af862a775b11d4a55",
+      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/4b810d4a6166ea2b8bed722712050484de6ea1fa/core/examples/m2-recursion/recursion.dart"
+    },
+    {
+      "id": "arith",
+      "title": "Every bit accounted for",
+      "label": "04 / Integers",
+      "path": "m2-arith/arith.dart",
+      "description": "Real unsigned 64-bit arithmetic, including values beyond JavaScript’s safe integer range. Overflow and integer division by zero trap.",
+      "functions": [
+        {
+          "name": "gcd",
+          "args": [
+            {
+              "name": "x",
+              "type": "u64",
+              "value": "48"
+            },
+            {
+              "name": "y",
+              "type": "u64",
+              "value": "18"
+            }
+          ],
+          "result": "u64"
+        },
+        {
+          "name": "remU64",
+          "args": [
+            {
+              "name": "a",
+              "type": "u64",
+              "value": "100"
+            },
+            {
+              "name": "b",
+              "type": "u64",
+              "value": "7"
+            }
+          ],
+          "result": "u64"
+        },
+        {
+          "name": "divU64",
+          "args": [
+            {
+              "name": "a",
+              "type": "u64",
+              "value": "100"
+            },
+            {
+              "name": "b",
+              "type": "u64",
+              "value": "7"
+            }
+          ],
+          "result": "u64"
+        },
+        {
+          "name": "digitSum",
+          "args": [
+            {
+              "name": "n",
+              "type": "u64",
+              "value": "123456789"
+            }
+          ],
+          "result": "u64"
+        }
+      ],
+      "source": "import '../../runtime/dc-core-bare/prelude.dart';\n\n@bare\nu64 mulU64(u64 a, u64 b) => a * b;\n@bare\nu32 mulU32(u32 a, u32 b) => a * b;\n@bare\nu16 mulU16(u16 a, u16 b) => a * b;\n@bare\nu8 mulU8(u8 a, u8 b) => a * b;\n\n@bare\nu64 divU64(u64 a, u64 b) => a ~/ b;\n@bare\nu64 remU64(u64 a, u64 b) => a % b;\n@bare\nu32 divU32(u32 a, u32 b) => a ~/ b;\n@bare\nu32 remU32(u32 a, u32 b) => a % b;\n@bare\nu8 divU8(u8 a, u8 b) => a ~/ b;\n@bare\nu8 remU8(u8 a, u8 b) => a % b;\n\n@bare\nu64 gcd(u64 x, u64 y) {\n  var a = x;\n  var b = y;\n  while (u64(0) < b) {\n    var t = a % b;\n    a = b;\n    b = t;\n  }\n  return a;\n}\n\n@bare\nu32 gcdU32(u32 x, u32 y) {\n  var a = x;\n  var b = y;\n  while (u32(0) < b) {\n    var t = a % b;\n    a = b;\n    b = t;\n  }\n  return a;\n}\n\n@bare\nu64 digitSum(u64 n) {\n  var rest = n;\n  var sum = u64(0);\n  while (u64(0) < rest) {\n    sum = sum + rest % u64(10);\n    rest = rest ~/ u64(10);\n  }\n  return sum;\n}\n\n@bare\nu64 isPrime(u64 n) {\n  if (n < u64(2)) {\n    return u64(0);\n  }\n  var i = u64(2);\n  while (i * i <= n) {\n    if (n % i == u64(0)) {\n      return u64(0);\n    }\n    i = i + u64(1);\n  }\n  return u64(1);\n}\n\n@bare\nu64 powMod(u64 base, u64 exp, u64 m) {\n  var b = base % m;\n  var e = exp;\n  var acc = u64(1) % m;\n  while (u64(0) < e) {\n    if (e % u64(2) == u64(1)) {\n      acc = acc * b % m;\n    }\n    b = b * b % m;\n    e = e ~/ u64(2);\n  }\n  return acc;\n}\n\n@bare\nu64 lcm(u64 a, u64 b) {\n  if (a == u64(0)) {\n    return u64(0);\n  }\n  if (b == u64(0)) {\n    return u64(0);\n  }\n  return a ~/ gcd(a, b) * b;\n}\n\n@bare\nu64 sumProperDivisors(u64 n) {\n  var sum = u64(0);\n  var i = u64(1);\n  while (i < n) {\n    if (n % i == u64(0)) {\n      sum = sum + i;\n    }\n    i = i + u64(1);\n  }\n  return sum;\n}",
+      "hasHeap": false,
+      "bytes": 465,
+      "sha256": "e66e117b717e14c9c035a61b9cb306c7c28a7e34bc6d23750bae85e49d7898aa",
+      "sourceSha256": "59ac78384eebbe351118b6acc05fae64658449324e1a9fec634207c87b55e910",
+      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/4b810d4a6166ea2b8bed722712050484de6ea1fa/core/examples/m2-arith/arith.dart"
+    },
+    {
+      "id": "float",
+      "title": "Room for a fraction",
+      "label": "05 / Floating point",
+      "path": "m4-float-arith/floatarith.dart",
+      "description": "IEEE-754 arithmetic emitted by the same compiler. Floating-point division by zero produces Infinity or NaN; integer division traps.",
+      "functions": [
+        {
+          "name": "addF64",
+          "args": [
+            {
+              "name": "a",
+              "type": "f64",
+              "value": "0.1"
+            },
+            {
+              "name": "b",
+              "type": "f64",
+              "value": "0.2"
+            }
+          ],
+          "result": "f64"
+        },
+        {
+          "name": "divF64",
+          "args": [
+            {
+              "name": "a",
+              "type": "f64",
+              "value": "1"
+            },
+            {
+              "name": "b",
+              "type": "f64",
+              "value": "0"
+            }
+          ],
+          "result": "f64"
+        },
+        {
+          "name": "negF64",
+          "args": [
+            {
+              "name": "a",
+              "type": "f64",
+              "value": "0"
+            }
+          ],
+          "result": "f64"
+        }
+      ],
+      "source": "import '../../runtime/dc-core-bare/prelude.dart';\n\n@bare\nf64 addF64(f64 a, f64 b) => a + b;\n@bare\nf64 subF64(f64 a, f64 b) => a - b;\n@bare\nf64 mulF64(f64 a, f64 b) => a * b;\n@bare\nf64 divF64(f64 a, f64 b) => a / b;\n\n@bare\nf32 addF32(f32 a, f32 b) => a + b;\n@bare\nf32 subF32(f32 a, f32 b) => a - b;\n@bare\nf32 mulF32(f32 a, f32 b) => a * b;\n@bare\nf32 divF32(f32 a, f32 b) => a / b;\n\n@bare\nf64 negF64(f64 a) => -a;\n@bare\nf32 negF32(f32 a) => -a;\n\n@bare\nu64 ltF64(f64 a, f64 b) {\n  if (a < b) {\n    return u64(1);\n  }\n  return u64(0);\n}\n\n@bare\nu64 leF64(f64 a, f64 b) {\n  if (a <= b) {\n    return u64(1);\n  }\n  return u64(0);\n}\n\n@bare\nu64 gtF64(f64 a, f64 b) {\n  if (a > b) {\n    return u64(1);\n  }\n  return u64(0);\n}\n\n@bare\nu64 geF64(f64 a, f64 b) {\n  if (a >= b) {\n    return u64(1);\n  }\n  return u64(0);\n}\n\n@bare\nu64 eqF64(f64 a, f64 b) {\n  if (a == b) {\n    return u64(1);\n  }\n  return u64(0);\n}\n\n@bare\nu64 neF64(f64 a, f64 b) {\n  if (a != b) {\n    return u64(1);\n  }\n  return u64(0);\n}\n\n@bare\nu64 ltF32(f32 a, f32 b) {\n  if (a < b) {\n    return u64(1);\n  }\n  return u64(0);\n}\n\n@bare\nf64 literalF64() => f64(3.141592653589793);\n@bare\nf32 literalF32() => f32(0.1);\n\n@bare\nf64 literalFromInt() => f64(2);\n\n@bare\nf64 widen(f32 x) => x.toF64(); // fpext, exact\n@bare\nf32 narrow(f64 x) => x.toF32(); // fptrunc, round to nearest even\n@bare\nf32 u32ToF32(u32 x) => x.toF32(); // uitofp\n@bare\nf64 u64ToF64(u64 x) => x.toF64(); // uitofp\n@bare\nu32 truncF32(f32 x) => x.toU32trunc(); // llvm.fptoui.sat: clamp, NaN -> 0\n@bare\nu64 truncF64(f64 x) => x.toU64trunc();\n\n@bare\nf64 horner4(f64 x) {\n  var acc = f64(1.0) / f64(24.0);\n  acc = acc * x + f64(1.0) / f64(6.0);\n  acc = acc * x + f64(0.5);\n  acc = acc * x + f64(1.0);\n  acc = acc * x + f64(1.0);\n  return acc;\n}\n\n@bare\nf64 geomSum(u64 n, f64 ratio) {\n  var sum = f64(0.0);\n  var term = f64(1.0);\n  var i = u64(0);\n  while (i < n) {\n    sum = sum + term;\n    term = term * ratio;\n    i = i + u64(1);\n  }\n  return sum;\n}",
+      "hasHeap": false,
+      "bytes": 327,
+      "sha256": "83b5c2bca4a9ffdda91bda66a4c953768a915fa9f1cfcb59e928388b474989f7",
+      "sourceSha256": "a1445f4a65f261a834a9dd7c49c732068e868a5dcee9394e433fbcf193a3b8cd",
+      "sourceUrl": "https://github.com/DotCorr/dcdart/blob/4b810d4a6166ea2b8bed722712050484de6ea1fa/core/examples/m4-float-arith/floatarith.dart"
+    }
+  ]
+}

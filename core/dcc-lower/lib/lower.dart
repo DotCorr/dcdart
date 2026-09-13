@@ -1578,12 +1578,13 @@ class _BareFunctionLowerer {
         // which ADR-0057 left unimplemented for want of a real case and
         // which still is.
         if (expr is FunctionInvocation && _calleeOf(expr) == null) {
-          _lowerIndirectCall(
+          final result = _lowerIndirectCall(
             _lowerCalleeValue(expr),
             expr.arguments,
             allowVoid: true,
             what: 'the called function pointer',
           );
+          if (result != null) _releaseTemporary(expr, result);
           return;
         }
         throw DccLowerError(
@@ -2284,6 +2285,18 @@ class _BareFunctionLowerer {
     // either DCHeapPointer- or DCWeakPointer-typed, never both), so
     // identity comparison against either list is safe with no extra check.
     final exceptDecl = expr is VariableGet ? expr.variable : null;
+    // Every returned heap reference transfers +1, including a borrowed
+    // parameter, `this`, or a field. Acquire it before local destruction.
+    if (value.type is DCHeapPointer &&
+        !_isFreshHeapOwnership(expr) && !_heapLocals.contains(exceptDecl)) {
+      _addInstr(Retain(object: value));
+    }
+    if (value.type is DCWeakPointer &&
+        !_isFreshHeapOwnership(expr) && !_weakLocals.contains(exceptDecl)) {
+      throw DccLowerError('"$context": returning a borrowed Weak reference '
+          'requires weak-to-weak retain, which is not implemented; return '
+          'a fresh Weak.fromStrong reference or an owned local');
+    }
     _releaseHeapLocals(exceptDecl: exceptDecl);
     _releaseWeakLocals(exceptDecl: exceptDecl);
     _addInstr(Return(value: value));
@@ -2395,17 +2408,72 @@ class _BareFunctionLowerer {
     // the same ADR-0019 convention. Leaving these two node types out would
     // make `final b = mk(v);` retain a reference nobody else holds and leak
     // it — the exact bug the StaticInvocation case above exists to prevent.
-    if (expr is LocalFunctionInvocation || expr is FunctionInvocation) return true;
+    if (expr is LocalFunctionInvocation || expr is FunctionInvocation ||
+        expr is InstanceInvocation) return true;
     if (expr is InstanceGet) {
       final target = expr.interfaceTarget;
-      return target.name.text == 'value' &&
+      return (target.name.text == 'value' &&
           target.enclosingClass?.name == 'Weak' &&
-          target.enclosingLibrary.importUri == preludeUri;
+          target.enclosingLibrary.importUri == preludeUri) ||
+          (target is Field && _isFreshHeapOwnership(expr.receiver));
     }
     return false;
   }
 
+  /// Drop the caller's temporary ownership after its final borrowed use.
+  /// Named values stay owned by their binding; @owned arguments transfer
+  /// their reference to the callee and must not pass through this helper.
+  void _releaseTemporary(Expression source, DCValue value) {
+    if (!_isFreshHeapOwnership(source)) return;
+    if (value.type is DCHeapPointer) {
+      _addInstr(Release(object: value));
+    } else if (value.type is DCWeakPointer) {
+      _addInstr(DropWeak(object: value));
+    }
+  }
+
+  DCValue _booleanLiteral(bool value) {
+    // Use the existing integer-comparison instruction to materialize i1.
+    final bit = DCValue(_allocId(), DCInt.u8);
+    final zero = DCValue(_allocId(), DCInt.u8);
+    final result = DCValue(_allocId(), const DCBool());
+    _addInstr(ConstInt(dest: bit, bits: value ? 1 : 0));
+    _addInstr(ConstInt(dest: zero, bits: 0));
+    _addInstr(ICmp(dest: result, predicate: ICmpPredicate.ne, lhs: bit, rhs: zero));
+    return result;
+  }
+
+  DCValue _lowerLogical(LogicalExpression expr) {
+    final lhs = _lowerExpression(expr.left);
+    if (lhs.type is! DCBool) {
+      throw DccLowerError('"$context": logical operands must be bool');
+    }
+    final rhsBlock = _allocBlockId();
+    final mergeBlock = _allocBlockId();
+    final result = DCValue(_allocId(), const DCBool());
+    final isAnd = expr.operatorEnum == LogicalExpressionOperator.AND;
+    _addInstr(CondBranch(
+      cond: lhs,
+      trueTarget: isAnd ? rhsBlock : mergeBlock,
+      trueArgs: isAnd ? const [] : [lhs],
+      falseTarget: isAnd ? mergeBlock : rhsBlock,
+      falseArgs: isAnd ? [lhs] : const [],
+    ));
+    _finishBlock();
+    _startBlock(rhsBlock, const []);
+    final rhs = _lowerExpression(expr.right);
+    if (rhs.type is! DCBool) {
+      throw DccLowerError('"$context": logical operands must be bool');
+    }
+    _addInstr(Branch(target: mergeBlock, args: [rhs]));
+    _finishBlock();
+    _startBlock(mergeBlock, [result]);
+    return result;
+  }
+
   DCValue _lowerExpression(Expression expr) {
+    if (expr is BoolLiteral) return _booleanLiteral(expr.value);
+    if (expr is LogicalExpression) return _lowerLogical(expr);
     if (expr is VariableGet) {
       final value = _values[expr.variable];
       if (value == null) {
@@ -3036,6 +3104,7 @@ class _BareFunctionLowerer {
         }
         final dest = DCValue(_allocId(), const DCWeakPointer(DCVoid()));
         _addInstr(MakeWeak(dest: dest, object: object));
+        _releaseTemporary(expr.arguments.positional.single, object);
         return dest;
       }
     }
@@ -3060,6 +3129,7 @@ class _BareFunctionLowerer {
         }
         final dest = DCValue(_allocId(), const DCHeapPointer(DCVoid()));
         _addInstr(WeakLoad(dest: dest, weak: weak));
+        _releaseTemporary(expr.receiver, weak);
         return dest;
       }
 
@@ -3182,8 +3252,31 @@ class _BareFunctionLowerer {
             expr.receiver, enclosing, 'the call to "${target.name.text}"');
         final receiver = _lowerExpression(expr.receiver);
         final args = <DCValue>[receiver];
-        for (final arg in expr.arguments.positional) {
-          args.add(_lowerExpression(arg));
+        final ownership = <bool>[false];
+        final params = target.function.positionalParameters;
+        final sources = expr.arguments.positional;
+        if (params.length != sources.length || expr.arguments.named.isNotEmpty) {
+          throw DccLowerError('"$context": methods require all positional arguments');
+        }
+        for (var i = 0; i < params.length; i++) {
+          final arg = _lowerExpression(sources[i]);
+          final expected = _lowerType(
+            _substituteType(params[i].type, inst.substitution),
+            context: '$context method argument $i',
+          );
+          if (arg.type != expected) {
+            throw DccLowerError('"$context": method argument $i has type '
+                '${arg.type}, expected $expected');
+          }
+          final owned = _hasMarkerAnnotation(params[i].annotations, '_Owned', preludeUri);
+          if (owned && !_isFreshHeapOwnership(sources[i])) {
+            if (arg.type is DCHeapPointer) _addInstr(Retain(object: arg));
+            if (arg.type is DCWeakPointer) {
+              throw DccLowerError('"$context": an @owned Weak argument must be fresh');
+            }
+          }
+          args.add(arg);
+          ownership.add(owned && arg.type is DCHeapPointer);
         }
         // The callee's return type is written in terms of the RECEIVER's
         // type parameters, not this function's -- `T unwrap()` on
@@ -3202,8 +3295,14 @@ class _BareFunctionLowerer {
           // The receiver is BORROWED (ADR-0019's default): the caller keeps
           // its reference for the duration of the call, so the callee must
           // not release it. Same convention as any non-@owned heap param.
-          argOwnership: List<bool>.filled(args.length, false),
+          argOwnership: ownership,
         ));
+        _releaseTemporary(expr.receiver, receiver);
+        for (var i = 0; i < params.length; i++) {
+          if (!_hasMarkerAnnotation(params[i].annotations, '_Owned', preludeUri)) {
+            _releaseTemporary(sources[i], args[i + 1]);
+          }
+        }
         return dest;
       }
 
@@ -3287,14 +3386,14 @@ class _BareFunctionLowerer {
       if (operand is EqualsNull) {
         return _lowerNullCheck(operand.expression, negated: true);
       }
-      // A general boolean `!` needs a NOT on an i1, which DC-IR has no
-      // instruction for. `!=` is handled above as a single `icmp ne` rather
-      // than "compare then invert", so nothing needs it yet; a real `!`
-      // operator is left unimplemented instead of faked (GAP-0023).
-      throw DccLowerError(
-        '"$context": `!` is only supported as part of `!=` on sized ints; '
-        'a general boolean NOT has no DC-IR instruction yet (GAP-0023)',
-      );
+      final value = _lowerExpression(operand);
+      if (value.type is! DCBool) {
+        throw DccLowerError('"$context": boolean NOT requires bool');
+      }
+      final zero = _booleanLiteral(false);
+      final result = DCValue(_allocId(), const DCBool());
+      _addInstr(ICmp(dest: result, predicate: ICmpPredicate.eq, lhs: value, rhs: zero));
+      return result;
     }
 
     throw DccLowerError(
@@ -3358,6 +3457,7 @@ class _BareFunctionLowerer {
       lhs: value,
       rhs: nullValue,
     ));
+    _releaseTemporary(operand, value);
     return dest;
   }
 
@@ -3799,6 +3899,11 @@ class _BareFunctionLowerer {
       args: loweredArgs,
       argOwnership: argOwnership,
     ));
+    for (var i = 0; i < calleeParams.length; i++) {
+      if (!_hasMarkerAnnotation(calleeParams[i].annotations, '_Owned', preludeUri)) {
+        _releaseTemporary(callArgs[i], loweredArgs[i]);
+      }
+    }
   }
 
   // -------------------------------------------------------------------
@@ -4003,6 +4108,11 @@ class _BareFunctionLowerer {
       args: loweredArgs,
       argOwnership: argOwnership,
     ));
+    for (var i = 0; i < calleeParams.length; i++) {
+      if (!_hasMarkerAnnotation(calleeParams[i].annotations, '_Owned', preludeUri)) {
+        _releaseTemporary(callArgs[i], loweredArgs[i]);
+      }
+    }
     return dest;
   }
 
@@ -4191,6 +4301,11 @@ class _BareFunctionLowerer {
     // checked every argument against. dc-elide therefore sees exactly the
     // ownership this lowering acted on, with no second copy to disagree.
     _addInstr(IndirectCall(dest: dest, callee: callee, args: loweredArgs));
+    for (var i = 0; i < signature.params.length; i++) {
+      if (!signature.params[i].owned) {
+        _releaseTemporary(callArgs[i], loweredArgs[i]);
+      }
+    }
     return dest;
   }
 
@@ -4449,6 +4564,11 @@ class _BareFunctionLowerer {
       _addInstr(Store(pointer: fieldPtr, value: value));
     }
 
+    // Each field retained its own reference. Drop each temporary argument
+    // once, even when the constructor stores it into several fields.
+    for (var i = 0; i < ctorParams.length; i++) {
+      _releaseTemporary(expr.arguments.positional[i], paramToArg[ctorParams[i]]!);
+    }
     return dest;
   }
 
@@ -4462,6 +4582,11 @@ class _BareFunctionLowerer {
     _addInstr(PtrOffset(dest: fieldPtr, base: objectPtr, offsetBytes: field.offset));
     final dest = DCValue(_allocId(), field.type);
     _addInstr(Load(dest: dest, pointer: fieldPtr));
+    if (_isFreshHeapOwnership(expr.receiver)) {
+      // A returned child must outlive destruction of its temporary parent.
+      if (dest.type is DCHeapPointer) _addInstr(Retain(object: dest));
+      _releaseTemporary(expr.receiver, objectPtr);
+    }
     return dest;
   }
 
@@ -4520,10 +4645,12 @@ class _BareFunctionLowerer {
       _addInstr(Load(dest: oldValue, pointer: fieldPtr));
       _addInstr(Store(pointer: fieldPtr, value: value));
       _addInstr(Release(object: oldValue));
+      _releaseTemporary(expr.receiver, objectPtr);
       return;
     }
 
     _addInstr(Store(pointer: fieldPtr, value: value));
+    _releaseTemporary(expr.receiver, objectPtr);
   }
 
   _StructField _findHeapField(_ClassInstance inst, String name) {

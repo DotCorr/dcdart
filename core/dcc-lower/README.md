@@ -1,3 +1,7 @@
+## Current correctness update (2026-09-13)
+
+Temporary ownership and method `@owned` arguments are covered by `temporary-ownership` conformance. Boolean literals, general NOT, and short-circuit AND/OR are supported. See [the current audit](../docs/language-audit-2026-09-13.md) for remaining limitations; the milestone narrative below is historical.
+
 # dcc-lower — Kernel IR → DC-IR
 
 Maps to `DCDART_SPEC.md` §1's `dcc-lower` stage. **Implemented and working, fully verified** for all

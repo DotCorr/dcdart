@@ -1,0 +1,31 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "dcdart-compiler",
+  "main": "src/index.ts",
+  "account_id": "f7bbfcc3ddb170b10e8304f8b6e4bda4",
+  "compatibility_date": "2026-09-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    { "pattern": "dcdart.dotcorr.com/api/*", "zone_name": "dotcorr.com" },
+  ],
+  "containers": [
+    {
+      "class_name": "Sandbox",
+      "image": "./Dockerfile",
+      "instance_type": "standard-1",
+      "max_instances": 2,
+    },
+  ],
+  "durable_objects": {
+    "bindings": [{ "class_name": "Sandbox", "name": "Sandbox" }],
+  },
+  "migrations": [{ "new_sqlite_classes": ["Sandbox"], "tag": "v1" }],
+  "ratelimits": [
+    {
+      "name": "COMPILE_LIMIT",
+      "namespace_id": "1001",
+      "simple": { "limit": 6, "period": 60 },
+    },
+  ],
+  "observability": { "enabled": true },
+}

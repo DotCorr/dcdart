@@ -41,8 +41,14 @@ int main(void) {
 
     /* Deep chains: each of these holds n objects alive simultaneously, far
      * beyond anything the old arena could represent. */
+    #ifdef DC_TEST_FREESTANDING
+    /* The freestanding class region is 64 KiB: 2048 32-byte slots.
+     * 4000 simultaneous objects correctly traps on exhaustion there. */
+    static const uint64_t deep[] = {1000, 2000};
+#else
     static const uint64_t deep[] = {1000, 2000, 4000};
-    for (unsigned i = 0; i < 3; i++) {
+#endif
+    for (unsigned i = 0; i < sizeof(deep) / sizeof(deep[0]); i++) {
         uint64_t n = deep[i];
         uint64_t result = sumBoxValues(n);
         if (result != expected_sum(n)) return 4;   /* deep chain computed wrong */

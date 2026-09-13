@@ -120,7 +120,7 @@ if command -v timeout >/dev/null 2>&1; then
 elif command -v gtimeout >/dev/null 2>&1; then
   TIMEOUT_CMD=(gtimeout 120)
 else
-  TIMEOUT_CMD=()
+  setup_error "timeout/gtimeout is required for the recursive-instantiation rejection test"
 fi
 ( cd "$EXAMPLE_DIR" && "${TIMEOUT_CMD[@]}" "${DCC_CMD[@]}" build --mode bare \
     --target bare-x86_64 recursive_reject.dart -o "$WORKDIR/reject.o" ) \
@@ -249,26 +249,22 @@ arc_is 'boxBoth'     'alloc=2 retain=0 release=2 makeweak=0 weakload=0 dropweak=
 # adjacency itself. The behavior checks above (the VALUES) remain the final
 # arbiter that no read-after-free was introduced.
 #
-# Balance after the change: the Node carries +1 (its Alloc; both retains are
-# now elided) against -1 (Box$Node_dtor's release of the field -- the local
-# and alias releases are elided with their retains); the Box +1/-1 (its
-# local release survives and cascades through the dtor).
-arc_is 'boxNode'     'alloc=2 retain=0 release=1 makeweak=0 weakload=0 dropweak=0'
-
-# The synthesized per-instantiation destructor: exactly one Release, for the
-# one heap-typed field the instantiation has.
+# ADR-0074 corrects the return convention: unwrap now returns an owned +1.
+# The Node's allocation reference is stored in the box (that local retain/
+# release pair elides). unwrap retains the child once; caller cleanup drops
+# that returned reference and the Box. Box destruction drops the field's
+# reference. The final field read occurs before either caller release.
+arc_is 'boxNode'     'alloc=2 retain=0 release=2 makeweak=0 weakload=0 dropweak=0'
 arc_is 'Box\$Node_dtor' 'alloc=0 retain=0 release=1 makeweak=0 weakload=0 dropweak=0'
-
-# The specialized methods borrow their receiver and return a borrowed value
-# (ADR-0019's default): no ARC of their own at all, at EVERY instantiation.
 arc_is 'Box\$u64_unwrap'  'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0'
 arc_is 'Box\$u32_unwrap'  'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0'
-arc_is 'Box\$Node_unwrap' 'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0'
+arc_is 'Box\$Node_unwrap' 'alloc=0 retain=1 release=0 makeweak=0 weakload=0 dropweak=0'
 echo "  ARC counts ok: value-typed instantiations carry no retain at all, Box\$Node_dtor releases exactly its one heap field"
 
 # ---------------------------------------------------------------------------
 # Step 4 — BEHAVIOUR and LEAK, through the portable link helper.
 # ---------------------------------------------------------------------------
+DC_HARNESS_LIBC=1
 dc_link "$WORKDIR/generic_class_test" "$EXAMPLE_DIR/main.c" \
   "$WORKDIR/generic_class.o" "$SRC"
 echo "  link mode: $DC_LINK_MODE"

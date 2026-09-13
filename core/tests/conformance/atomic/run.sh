@@ -269,6 +269,7 @@ source "$CORE_DIR/tests/conformance/_lib/hosted-link.sh"
   || { cat "$WORKDIR/hostbuild.log" >&2; fail "dcc build --target host failed"; }
 [[ -f "$WORKDIR/atomic.h" ]] || fail "--emit-header produced no header"
 
+DC_HARNESS_LIBC=1
 dc_link "$WORKDIR/atomic_test" "$EXAMPLE_DIR/main.c" "$WORKDIR/atomic.o" \
   "$EXAMPLE_DIR/atomic.dart" -I"$WORKDIR"
 

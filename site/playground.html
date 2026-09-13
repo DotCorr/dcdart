@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Playground — DCDart</title>
+    <meta
+      name="description"
+      content="Edit DCDart source, compile it with the real compiler, and execute its WebAssembly in your browser."
+    />
+    <link rel="canonical" href="https://dcdart.dotcorr.com/playground" />
+    <link rel="icon" href="dotcorr-isometric-white.svg" />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="editor-bundle.js"></script>
+  </head>
+  <body class="pad-page">
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="logo" href="/"
+        ><img class="logo-mark" src="dotcorr-isometric-white.svg" alt="" /><span
+          class="logo-word"
+          >DCDart</span
+        ></a
+      >
+      <nav aria-label="Main navigation">
+        <a href="/">Overview</a><a href="docs.html">Docs</a
+        ><a href="playground.html" class="active" aria-current="page"
+          >Playground</a
+        >
+      </nav>
+      <a class="gh" href="https://github.com/DotCorr/dcdart">GitHub ↗</a>
+    </header>
+    <main id="main" class="pad-shell">
+      <div class="pad-heading">
+        <h1>Try DCDart in your browser.</h1>
+        <p>Edit the code. Run it. See what happens.</p>
+      </div>
+      <section class="code-pad" aria-label="DCDart code playground">
+        <div class="pad-toolbar">
+          <a class="pad-brand" href="/">DCDart <span>Playground</span></a>
+          <label class="sample-control"
+            >Samples
+            <select id="samples" aria-label="Samples">
+              <option value="hello">Hello, native</option>
+              <option value="loop">Loops</option>
+              <option value="functions">Functions</option>
+              <option value="float">Floating point</option>
+            </select></label
+          >
+          <button id="new-program" class="tool-button">New</button
+          ><button id="reset-code" class="tool-button">Reset</button>
+          <div class="toolbar-end">
+            <button
+              id="download-code"
+              class="tool-button"
+              aria-label="Download source"
+            >
+              Download ↓</button
+            ><button id="stop-code" class="tool-button" hidden>Stop</button
+            ><button id="run-code" class="btn primary">▶ Run</button>
+          </div>
+        </div>
+        <div class="pad-columns">
+          <section class="editor-pane" aria-label="Source editor">
+            <div class="pad-pane-label">
+              <span>main.dart</span
+              ><span id="save-status">Saved on this device</span>
+            </div>
+            <div id="code-editor"></div>
+          </section>
+          <section class="output-pane" aria-label="Program output">
+            <div class="pad-pane-label">
+              <span>Output</span
+              ><button id="clear-output" class="tool-button">Clear</button>
+            </div>
+            <div class="pad-output">
+              <pre id="code-output" aria-live="polite">
+Run your code to see the result.</pre>
+            </div>
+            <div class="pad-invocation" id="invocation" hidden>
+              <label for="compiled-function">Function</label
+              ><select id="compiled-function"></select>
+              <div id="compiled-args"></div>
+              <button id="run-function" class="tool-button">
+                Run with these arguments →
+              </button>
+            </div>
+            <div class="pad-diagnostics">
+              <span class="pad-pane-label">Compiler &amp; runtime</span>
+              <pre id="code-diagnostics" role="status">
+Ready. The DCDart prelude is included automatically.</pre>
+            </div>
+          </section>
+        </div>
+        <div class="pad-statusbar">
+          <span id="pad-status">DCDart · WebAssembly</span
+          ><span>⌘ / Ctrl + Enter to run</span>
+        </div>
+      </section>
+      <div class="pad-help">
+        <span
+          >Source is compiled on our server. Your program runs in your
+          browser.</span
+        ><a href="docs.html">Language guide ↗</a>
+      </div>
+      <details class="pad-limits">
+        <summary>Supported code and execution limits</summary>
+        <p>
+          Write a single DCDart file using <code>@bare</code> functions.
+          Callable entry points accept and return <code>u64</code> or
+          <code>f64</code>. The prelude is included automatically; file imports
+          and packages are unavailable. This is DCDart’s supported language
+          subset, not the general Dart or Flutter runtime.
+        </p>
+        <p>
+          Compilation runs in an isolated, temporary container: 32 KiB of
+          source, a 40-second compile limit, and six requests per minute.
+          Execution uses fresh browser WebAssembly memory, a two-second limit,
+          and a 16 MiB memory cap. Compilation errors and unsupported features
+          are reported as errors. Source is kept on this device and sent to the
+          compiler when you press Run.
+        </p>
+        <p>
+          <a href="examples.html">Explore the precompiled runtime examples →</a>
+        </p>
+      </details>
+    </main>
+  </body>
+</html>

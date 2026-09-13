@@ -1,0 +1,22 @@
+{
+  "name": "dcdart-playground-compiler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "prepare:toolchain": "node prepare.mjs",
+    "deploy": "../node_modules/.bin/wrangler deploy"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0 WITH LLVM-exception",
+  "type": "module",
+  "dependencies": {
+    "@cloudflare/sandbox": "0.12.9"
+  },
+  "private": true,
+  "devDependencies": {
+    "@types/node": "^26.5.1",
+    "typescript": "^7.0.2"
+  }
+}

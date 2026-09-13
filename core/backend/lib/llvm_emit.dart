@@ -300,7 +300,8 @@ String emitModule(
   // by hand or through a different driver. A guarantee that only exists in a
   // command line is one command line away from being lost.
   buffer.writeln(
-    'attributes #0 = { nounwind${noRedZone ? ' noredzone' : ''} }',
+    'attributes #0 = { nounwind${noRedZone ? ' noredzone' : ''}'
+    '${freestanding ? ' "no-builtins"' : ''} }',
   );
   return buffer.toString();
 }

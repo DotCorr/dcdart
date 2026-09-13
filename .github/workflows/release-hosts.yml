@@ -1,0 +1,72 @@
+name: Build and verify release candidate
+on:
+  push:
+    branches: [codex/dcdart-web-playground]
+    paths: ['tools/release/**', 'core/**', '.github/workflows/release-hosts.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-latest, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check release attribution
+        run: python tools/release/check-attribution.py origin/main..HEAD
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: release-src
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.12.2
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+      - name: Install LLVM on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18
+          echo /usr/lib/llvm-18/bin >> "$GITHUB_PATH"
+      - name: Select LLVM on macOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install llvm lld coreutils
+          echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
+          echo "$(brew --prefix lld)/bin" >> "$GITHUB_PATH"
+          echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> "$GITHUB_ENV"
+      - name: Restore pinned frontend
+        shell: bash
+        run: |
+          cp core/scripts/vendor-frontend.sh release-src/core/scripts/vendor-frontend.sh
+          bash release-src/core/scripts/vendor-frontend.sh
+      - name: Build packaged compiler and execute native smoke test
+        run: python tools/release/package.py release-src dist
+      - name: Run compiler conformance and optimizer tests
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: release-src
+        run: |
+          for package in dc-objdump dc-elide backend; do
+            (cd core/$package && dart pub get)
+          done
+          bash core/tests/run-conformance.sh | tee conformance.log
+          grep -q "0 failed, 0 skipped" conformance.log
+          (cd core/dc-elide && dart test)
+          (cd core/backend && dart test)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dcdart-${{ matrix.os }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+          if-no-files-found: error

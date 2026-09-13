@@ -192,10 +192,16 @@ for OPT in 0 1 2 3 s; do
   DIS="$("$OBJDUMP" -d "$OBJ" 2>/dev/null)"
   [[ "$(grep -cE '^[[:space:]]+[0-9a-f]+:' <<<"$DIS")" -ge 1 ]] \
     || fail "$OBJDUMP produced no instructions for -O$OPT; the count below would pass vacuously"
-  FENCES="$(grep -cE 'mfence' <<<"$DIS")"
-  [[ "$FENCES" -ge 1 ]] \
-    || { echo "$DIS" >&2; fail "-O$OPT emitted no mfence at all — the seq_cst barrier was optimized away"; }
-  echo "  -O$OPT: $FENCES mfence(s) — the seq_cst barrier survived"
+  OPT_SEQ="$(awk '
+    index($0, "<storeThenLoadOther>:") { inside = 1; next }
+    inside && /^[[:space:]]*$/ { inside = 0 }
+    inside { print }
+  ' <<<"$DIS")"
+  # LLVM may use a locked stack operation instead of mfence. Both provide
+  # the required StoreLoad barrier; require it in the seqCst function.
+  grep -qE '(mfence|lock)' <<<"$OPT_SEQ" \
+    || { echo "$DIS" >&2; fail "-O$OPT emitted no seq_cst barrier"; }
+  echo "  -O$OPT: seq_cst barrier survived"
 done
 echo "FENCE: step 4 ok — barriers survive -O0/-O1/-O2/-O3/-Os"
 
@@ -217,6 +223,7 @@ source "$CORE_DIR/tests/conformance/_lib/hosted-link.sh"
   || { cat "$WORKDIR/hostbuild.log" >&2; fail "dcc build --target host failed"; }
 [[ -f "$WORKDIR/fence.h" ]] || fail "--emit-header produced no header"
 
+DC_HARNESS_LIBC=1
 dc_link "$WORKDIR/fence_test" "$EXAMPLE_DIR/main.c" "$WORKDIR/fence.o" \
   "$EXAMPLE_DIR/fence.dart" -I"$WORKDIR"
 

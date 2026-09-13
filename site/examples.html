@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Playground — DCDart</title>
+    <meta
+      name="description"
+      content="Run real DCDart-compiled WebAssembly locally. Explore loops, ARC, recursion, integers and floating point with your own inputs."
+    />
+    <link rel="canonical" href="https://dcdart.dotcorr.com/playground" />
+    <link rel="icon" href="dotcorr-isometric-white.svg" />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="playground.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="logo" href="/"
+        ><img class="logo-mark" src="dotcorr-isometric-white.svg" alt="" /><span
+          class="logo-word"
+          >DCDart</span
+        ></a
+      >
+      <nav aria-label="Main navigation">
+        <a href="/">Overview</a><a href="docs.html">Docs</a
+        ><a href="playground.html" class="active" aria-current="page"
+          >Playground</a
+        >
+      </nav>
+      <a class="gh" href="https://github.com/DotCorr/dcdart">GitHub ↗</a>
+    </header>
+    <main id="main" class="shell">
+      <div class="pg-header">
+        <span class="eyebrow"
+          ><i class="signal"></i>Local execution / WebAssembly</span
+        >
+        <h1>Meet the runtime.</h1>
+        <p>
+          Pick a program. Change its inputs. Run the actual code DCDart
+          compiled, including its generated memory management, in your browser.
+        </p>
+        <div class="pg-notice">
+          An execution playground: source is read-only and compiled ahead of
+          time. To edit and compile DCDart source,
+          <a href="docs.html#setup">install the compiler</a>. This page does not
+          simulate compilation.
+        </div>
+      </div>
+      <noscript
+        ><p class="noscript">
+          JavaScript and WebAssembly are required to run these examples.
+        </p></noscript
+      >
+      <div id="load-status" role="status" class="muted">
+        Loading the runtime manifest…
+      </div>
+      <div class="playground" id="playground" hidden>
+        <nav
+          class="demo-list"
+          id="demo-list"
+          aria-label="Example programs"
+        ></nav>
+        <div class="pg-main">
+          <div class="demo-title">
+            <h2 id="demo-title"></h2>
+            <p id="demo-description"></p>
+          </div>
+          <div class="workspace">
+            <section class="source-pane" aria-label="Compiled DCDart source">
+              <div class="source-bar">
+                <span id="source-name"></span
+                ><a id="source-download" download>Download source ↓</a>
+              </div>
+              <pre
+                id="source"
+                tabindex="0"
+                aria-label="Read-only source code"
+              ></pre>
+            </section>
+            <form id="run-form" class="run-pane">
+              <label for="function">FUNCTION</label
+              ><select id="function"></select>
+              <div id="args" class="args"></div>
+              <div class="run-actions">
+                <button id="run" class="btn primary" type="submit">
+                  Run function ↗</button
+                ><button id="reset" class="btn" type="button">Reset</button>
+              </div>
+              <div class="result-box" id="result-box">
+                <span class="serial">RETURN VALUE</span
+                ><output id="result" aria-live="polite">—</output>
+                <div id="run-status" class="mini-status" role="status">
+                  Ready. Enter inputs and run.
+                </div>
+                <div id="heap-status" class="mini-status"></div>
+              </div>
+            </form>
+          </div>
+          <div class="runtime-details">
+            <span id="runtime-info"></span
+            ><a id="wasm-download" download>Download WASM ↓</a
+            ><a id="llvm-download">Inspect LLVM IR ↗</a>
+          </div>
+        </div>
+      </div>
+      <div class="learn-grid">
+        <article>
+          <h3>The same compiler. A browser target.</h3>
+          <p>
+            The build uses DCDart’s existing Kernel frontend, lowering passes,
+            and LLVM emitter. LLVM then compiles that output to WebAssembly. All
+            computation runs locally; no server executes your inputs.
+          </p>
+        </article>
+        <article>
+          <h3>Memory you can account for.</h3>
+          <p>
+            The ARC examples include DCDart’s real allocator and
+            reference-counting code. The page reads the compiled runtime’s
+            live-allocation counter after the function returns. Each run starts
+            with fresh memory.
+          </p>
+        </article>
+      </div>
+      <details>
+        <summary>Execution limits &amp; build provenance</summary>
+        <p>
+          Programs run in a separate browser worker with a two-second execution
+          limit and a 16 MiB maximum linear memory. Integer inputs preserve all
+          64 bits. Invalid values are rejected, runtime traps are reported, and
+          a stopped or failed run is discarded.
+        </p>
+        <p>
+          This experimental WASM path is verified for these examples. It does
+          not add general WASM support to the released compiler, a hosted Dart
+          runtime, OS access, or a source compiler to this page. Source
+          downloads retain their original repository-relative prelude imports;
+          use them within a checkout.
+        </p>
+        <p>
+          <a href="runtime/manifest.json"
+            >Build manifest and SHA-256 hashes ↗</a
+          >
+          · <a href="https://github.com/DotCorr/dcdart">Compiler source ↗</a>
+        </p>
+      </details>
+      <footer class="foot">
+        <span>© 2026 DOTCORR / DCDART</span>
+        <div class="foot-links">
+          <a href="docs.html#setup">Install the compiler ↗</a
+          ><a href="/">Overview ↗</a>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>

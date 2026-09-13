@@ -1,0 +1,29 @@
+{
+  "name": "dcdart-site",
+  "version": "0.1.0",
+  "description": "DCDart website and real WebAssembly execution playground",
+  "scripts": {
+    "build": "npm run check:release && node tools/build-site.mjs",
+    "build:runtime": "node tools/build-runtime.mjs",
+    "dev": "npm run build && wrangler pages dev public",
+    "test": "node --test tests/runtime.test.mjs",
+    "test:browser": "playwright test",
+    "deploy": "npm run check:release -- --live && npm run build && wrangler pages deploy public --project-name dcdart --branch main",
+    "check:release": "node tools/check-release.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0 WITH LLVM-exception",
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "esbuild": "^0.28.2",
+    "prettier": "^3.9.6",
+    "wrangler": "^4.131.1"
+  },
+  "private": true,
+  "dependencies": {
+    "@codemirror/legacy-modes": "^6.5.4",
+    "codemirror": "^6.0.2"
+  }
+}

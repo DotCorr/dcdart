@@ -1,0 +1,25 @@
+{
+  "version": "0.1.2",
+  "tag": "v0.1.2",
+  "checkedAt": "2026-09-13",
+  "targets": [
+    "bare-x86_64",
+    "bare-aarch64",
+    "linux-x86_64",
+    "linux-aarch64",
+    "macos-x86_64",
+    "macos-arm64",
+    "ios-arm64",
+    "ios-simulator-arm64",
+    "android-arm64",
+    "windows-x86_64",
+    "windows-arm64"
+  ],
+  "homebrewVersion": "0.1.2",
+  "releaseAssets": [
+    "dcdart-v0.1.2-darwin-arm64.tar.gz",
+    "dcdart-v0.1.2-linux-x86_64.tar.gz",
+    "dcdart-v0.1.2-linux-arm64.tar.gz",
+    "dcdart-v0.1.2-windows-x86_64.zip"
+  ]
+}
