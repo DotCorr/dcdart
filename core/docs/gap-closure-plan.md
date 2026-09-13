@@ -107,3 +107,7 @@ is not completion when the requirement is to implement that feature.
 - Text C ABI (GAP-0047): bidirectional and callback slice regression passes
   locally; four-host validation pending. GAP-0046 lifetime safety stays open
   and is now reachable through foreign text.
+
+- Shared heap runtime (GAP-0064): backend split emission passes a local
+  two-object allocation/free regression and rejects mismatched layouts at link
+  time. CLI integration and platform verification remain pending (ADR-0082).

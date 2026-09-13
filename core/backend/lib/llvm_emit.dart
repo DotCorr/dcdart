@@ -160,6 +160,7 @@ String emitModule(
   bool noRedZone = false,
   int? heapRegionBytes,
   bool freestanding = false,
+  bool externalHeapRuntime = false,
 }) {
   heapRegionBytes ??= freestanding
       ? _defaultFreestandingHeapRegionBytes
@@ -261,7 +262,21 @@ String emitModule(
     buffer.writeln();
   }
   if (needsHeap) {
-    buffer.write(_emitHeapGlobals(regionBytes, sizeClasses));
+    if (externalHeapRuntime) {
+      final count = sizeClasses.length;
+      buffer.writeln('@dc_heap = external global [$count x [$regionBytes x i8]]');
+      buffer.writeln('@dc_heap_bump = external global [$count x i64]');
+      buffer.writeln('@dc_heap_free = external global [$count x ptr]');
+      buffer.writeln('@dc_heap_live = external global i64');
+      buffer.writeln('@dc_heap_sizes = external constant [$count x i64]');
+      // A retained relocation makes incompatible runtime layouts fail at link
+      // time, before either allocator can compute an address using the wrong stride.
+      buffer.writeln('@dc_heap_layout_v1_$regionBytes = external constant i8');
+      buffer.writeln('@dc_heap_required_layout = internal constant ptr @dc_heap_layout_v1_$regionBytes');
+      buffer.writeln('@llvm.used = appending global [1 x ptr] [ptr @dc_heap_required_layout], section "llvm.metadata"');
+    } else {
+      buffer.write(_emitHeapGlobals(regionBytes, sizeClasses));
+    }
   }
   // llvm.trap and the *.with.overflow.* intrinsics are recognized by name --
   // no library symbol backs them (they lower to inline instructions, ud2 /
@@ -1335,7 +1350,9 @@ const _reservedGlobalNames = {
 /// vanishes from the object. That is why `emitModule` pins every read-only
 /// global in `@llvm.compiler.used` — see the comment at the pin site.
 String _emitGlobal(DCGlobal global, {required String context}) {
-  if (_reservedGlobalNames.contains(global.linkName)) {
+  if (_reservedGlobalNames.contains(global.linkName) ||
+      global.linkName.startsWith('dc_heap_layout_') ||
+      global.linkName == 'dc_heap_required_layout') {
     throw BackendError(
       '"$context": global "${global.linkName}" collides with a name the '
       'backend emits for its own ARC arena. Rename it — symbol names are '
@@ -1530,6 +1547,18 @@ int _atomicWidthBytes(
 /// cursor, and a per-class intrusive free-list head. All zero-initialized, so
 /// all three land in `.bss` and cost nothing in the image. Emitted once per
 /// module, only when something in it actually allocates.
+/// Standalone heap state shared by separately compiled allocation clients.
+/// Match region size and target to every client. Link exactly one such object.
+String emitHeapRuntime({required String targetTriple, required int regionBytes}) {
+  if (regionBytes < _minSizeClassBytes ||
+      regionBytes & (regionBytes - 1) != 0) {
+    throw BackendError('heap runtime region size must be a power of two >= $_minSizeClassBytes');
+  }
+  return 'target triple = "$targetTriple"\n' +
+      _emitHeapGlobals(regionBytes, _sizeClassesFor(regionBytes)) +
+      '@dc_heap_layout_v1_$regionBytes = constant i8 0\n';
+}
+
 String _emitHeapGlobals(int regionBytes, List<int> sizeClasses) {
   final classCount = sizeClasses.length;
   final buffer = StringBuffer();
