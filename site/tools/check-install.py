@@ -5,7 +5,7 @@ prefix=Path(sys.argv[1]).absolute()
 prelude=prefix/'core/runtime/dc-core-bare/prelude.dart'
 assert prelude.is_file(), prelude
 binary=shutil.which('dcc'); assert binary, 'dcc is missing from PATH'
-assert subprocess.check_output([binary,'--version'],text=True).strip()=='dcc 0.1.1'
+assert subprocess.check_output([binary,'--version'],text=True).strip()=='dcc 0.1.2'
 os.environ['DCDART_DART']=shutil.which('dart')
 with tempfile.TemporaryDirectory() as td:
     p=Path(td)

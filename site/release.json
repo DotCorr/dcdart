@@ -1,6 +1,6 @@
 {
-  "version": "0.1.1",
-  "tag": "v0.1.1",
+  "version": "0.1.2",
+  "tag": "v0.1.2",
   "checkedAt": "2026-09-13",
   "targets": [
     "bare-x86_64",
@@ -15,11 +15,11 @@
     "windows-x86_64",
     "windows-arm64"
   ],
-  "homebrewVersion": "0.1.1",
+  "homebrewVersion": "0.1.2",
   "releaseAssets": [
-    "dcdart-v0.1.1-darwin-arm64.tar.gz",
-    "dcdart-v0.1.1-linux-x86_64.tar.gz",
-    "dcdart-v0.1.1-linux-arm64.tar.gz",
-    "dcdart-v0.1.1-windows-x86_64.zip"
+    "dcdart-v0.1.2-darwin-arm64.tar.gz",
+    "dcdart-v0.1.2-linux-x86_64.tar.gz",
+    "dcdart-v0.1.2-linux-arm64.tar.gz",
+    "dcdart-v0.1.2-windows-x86_64.zip"
   ]
 }

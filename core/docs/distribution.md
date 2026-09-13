@@ -1,4 +1,4 @@
-# DCDart 0.1.1 distribution and platform support
+# DCDart 0.1.2 distribution and platform support
 
 Cross-checked 13 September 2026 against the published tag, actual assets, and live package manifests.
 
@@ -40,7 +40,7 @@ For an archive install, preserve the `core/dcc/bin` and `core/runtime/dc-core-ba
 
 There are eleven explicit targets plus `host`: bare metal, Linux, macOS, Windows (x86-64 and ARM64), iOS ARM64, iOS Simulator ARM64, and Android ARM64. The mobile minimums are iOS 16 and Android API 26. Apple linking needs Xcode and its correct SDK; Android linking needs the NDK. The CLI produces an object/header pair, not an IPA/APK or a signed app.
 
-Use the generated C ABI from Swift/Objective-C via headers or from Android via an NDK library/JNI integration. Swift Package Manager, CocoaPods, Maven/Gradle integrations would package a particular native library; they are not required to install the desktop compiler. No such official wrapper package is published. The mobile harness executed five cases on macOS and iOS Simulator; iOS device and Android execution were not performed. See [mobile evidence](mobile-targets-0.1.1.md).
+Use the generated C ABI from Swift/Objective-C via headers or from Android via an NDK library/JNI integration. Swift Package Manager, CocoaPods, Maven/Gradle integrations would package a particular native library; they are not required to install the desktop compiler. No such official wrapper package is published. The mobile harness executed five cases on macOS and iOS Simulator; iOS device and Android execution were not performed. See [mobile evidence](mobile-targets-0.1.2.md).
 
 ## Release maintenance
 

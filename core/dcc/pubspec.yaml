@@ -2,7 +2,7 @@ name: dcc
 description: >
   The dcc CLI driver (ROADMAP.md M0). Plain hosted Dart bootstrap tooling,
   not DCDart itself -- see core/docs/decisions/0002-dcc-bootstrap-language.md.
-version: 0.1.1
+version: 0.1.2
 publish_to: none
 
 environment:

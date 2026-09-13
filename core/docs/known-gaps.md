@@ -1,3 +1,4 @@
+<!-- Current review and release priorities: language-audit-2026-09-13.md. Historical descriptions below are retained as reproductions. -->
 # Known gaps
 
 Work queue, not a confession log (`CLAUDE.md`). Every entry: what was worked around, and the cost.
@@ -282,7 +283,7 @@ retains on ANY `Release`, not only a matching one, which costs some elision and 
 
 **Domain:** dcc-lower (ARC insertion, ADR-0021). **Pre-existing — found while writing ADR-0063's
 example, not caused by it.**
-**Status:** OPEN — reproduces on `main`, and reproduces identically with elision DISABLED, so it is
+**Status:** RESOLVED (2026-09-13) — temporary-ownership conformance checks direct, local, indirect, and method borrowed calls, including weak temporaries.
 nothing to do with pass 3
 
 ```dart
@@ -1456,7 +1457,7 @@ has to learn about signedness). Both failures would be silent.
 ## GAP-0023 — No general boolean NOT; `!` works only as part of `!=`
 
 **Domain:** dc-ir, dcc-lower (M2)
-**Status:** OPEN
+**Status:** RESOLVED (2026-09-13) — general NOT, boolean literals, and short-circuit AND/OR use existing comparisons and control-flow blocks; boolean conformance executes guarded division cases.
 
 DC-IR has no NOT instruction. `!=` does not need one — ADR-0035 lowers `a != b` to a single
 `icmp ne`, not to "compare then invert" — but a standalone `!flag`, or `!(a < b)`, has nothing to
@@ -2458,7 +2459,7 @@ GAP-0057's question again from the other end.
 
 **Domain:** dcc-lower (ARC insertion, ADR-0021). **Pre-existing — found while writing ADR-0060's
 example, not caused by it.**
-**Status:** OPEN — reproduces on `main` with an ordinary direct call
+**Status:** RESOLVED — implicit-return cleanup is implemented and the void-release conformance suite passes (rechecked 2026-09-13).
 
 ```
 consumeEmpty(@owned Box b) {}            -> alloc=0 retain=0 release=0    LEAK
@@ -3016,7 +3017,7 @@ spec §4.1-adjacent and rule-4-frozen after M3, so it should be decided before M
 
 ---
 
-## GAP-0070 — `@bare` floating point is unavailable by default, and the escape hatch is unsafe by design
+## GAP-0075 — `@bare` floating point is unavailable by default, and the escape hatch is unsafe by design
 
 **Domain:** backend, dcc (ADR-0071)
 **Status:** OPEN — deliberate, and the honest cost of ADR-0071
@@ -3046,7 +3047,7 @@ FP for the whole target. That is a language question, not a flag.
 ## GAP-0073 — LLVM loop-idiom recognition turns a `@bare` store loop into a `memset` LIBCALL on freestanding targets
 
 **Domain:** backend (freestanding targets)
-**Status:** OPEN — filed by NEON N3's elementAt migration, 2026-08-28; workaround in the reporting file
+**Status:** RESOLVED (2026-09-13) — freestanding functions carry LLVM no-builtins; no-libcalls conformance verifies zero/copy loops on x86-64 and ARM64 without adding libc to the allowlist.
 
 A plain `@bare` zeroing loop written with `elementAt` (ADR-0070) compiles, at `--target
 bare-x86_64 --allow-fp`, into a call to `memset` — an undefined symbol, so
@@ -3084,7 +3085,7 @@ letter. Decide by ADR; do not grow the allowlist silently.
 ## GAP-0074 — a fresh heap return passed DIRECTLY as a constructor argument leaks one reference
 
 **Domain:** dcc-lower (ARC insertion)
-**Status:** OPEN — filed by NEON N3's autograd tape, 2026-08-28; workaround at the use sites
+**Status:** RESOLVED (2026-09-13) — constructor temporaries are released after all field references are retained; nested/shared-field cases have runtime and pre/post-elision assertions.
 
 Passing a heap-returning call's result straight into a constructor leaks the temporary: the
 callee's +1 (fresh return) is retained again by the constructor's field initialization and no

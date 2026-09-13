@@ -145,8 +145,8 @@
         <h1>DCDart documentation</h1>
         <p>
           Release
-          <a href="https://github.com/DotCorr/dcdart/releases/tag/v0.1.1"
-            >v0.1.1</a
+          <a href="https://github.com/DotCorr/dcdart/releases/tag/v0.1.2"
+            >v0.1.2</a
           >
           · Cross-checked 13 September 2026.
         </p>
@@ -488,7 +488,7 @@ void uartInit(u64 port) {
 
         <h2 id="targets">Compilation targets</h2>
         <p>
-          v0.1.1 has eleven explicit targets, plus <code>host</code> to select
+          v0.1.2 has eleven explicit targets, plus <code>host</code> to select
           the development machine. The compiler’s installation platform and the
           platform your code targets are separate. Cross-linking requires the
           destination platform’s SDK, libraries, and linker.
@@ -554,7 +554,7 @@ void uartInit(u64 port) {
           runtime.
         </p>
 
-        <h2 id="mobile">iOS &amp; Android in v0.1.1</h2>
+        <h2 id="mobile">iOS &amp; Android in v0.1.2</h2>
         <p>
           Compile the same systems code for iOS 16+ arm64 devices, iOS 16+ arm64
           simulators, and Android arm64 API 26+. Device and simulator objects
@@ -587,19 +587,19 @@ dcc build --mode bare --target android-arm64 logic.dart -o logic-android.o --emi
         <p>
           Exact toolchain commands and evidence:
           <a
-            href="https://github.com/DotCorr/dcdart/blob/v0.1.1/core/docs/mobile-targets-0.1.1.md"
+            href="https://github.com/DotCorr/dcdart/blob/v0.1.2/core/docs/mobile-targets-0.1.2.md"
             >mobile target release notes</a
           >
           and
           <a
-            href="https://github.com/DotCorr/dcdart/blob/v0.1.1/core/tests/conformance/mobile-native/run.py"
+            href="https://github.com/DotCorr/dcdart/blob/v0.1.2/core/tests/conformance/mobile-native/run.py"
             >conformance harness</a
           >. No Dart VM is linked into the generated application.
         </p>
 
         <h2 id="setup">Build &amp; run</h2>
         <p>
-          Install v0.1.1 through the DotCorr Homebrew tap on macOS Apple Silicon
+          Install v0.1.2 through the DotCorr Homebrew tap on macOS Apple Silicon
           or Linux x86-64/ARM64. Linux archives were built and tested on Ubuntu
           24.04 and require glibc 2.39 or newer. A Dart SDK 3.12.2 must be
           available on <code>PATH</code>, or set <code>DCDART_DART</code> to its
@@ -611,7 +611,7 @@ brew install dcdart
 # Already installed?
 brew update
 brew upgrade dcdart
-dcc --version  # dcc 0.1.1
+dcc --version  # dcc 0.1.2
 
 # compile a program — pass the shipped prelude; its path is matched lexically,
 # so spell it the same in your source's import
@@ -686,7 +686,7 @@ clang host.c main.obj -o example.exe
         <p>
           Download verified archives for macOS ARM64, Linux x86-64/ARM64, and
           Windows x86-64 from
-          <a href="https://github.com/DotCorr/dcdart/releases/tag/v0.1.1"
+          <a href="https://github.com/DotCorr/dcdart/releases/tag/v0.1.2"
             >GitHub Releases</a
           >. Keep the directory layout intact. macOS Intel currently requires a
           source build. Use the official DotCorr tap, Scoop bucket, or archives
@@ -705,7 +705,7 @@ clang host.c main.obj -o example.exe
             ><code>core/docs/testing-setup.md</code></a
           >. The short version:
         </p>
-        <pre><code>git clone --branch v0.1.1 https://github.com/DotCorr/dcdart
+        <pre><code>git clone --branch v0.1.2 https://github.com/DotCorr/dcdart
 cd dcdart
 bash core/scripts/vendor-frontend.sh   # required — restores the vendored frontend
 source core/scripts/dcdart-env.sh
