@@ -2,6 +2,12 @@
 
 Current release: [v0.1.3](https://github.com/DotCorr/dcdart/releases/tag/v0.1.3), built from `e8c5c4be8607e092b7322f29ac46ae7cdfcd535f`.
 
+Distribution trust: v0.1.3 has no verified Windows publisher signature or macOS
+Developer ID notarization. Package-manager CI is execution evidence, not a
+Gatekeeper/SmartScreen test. Signing infrastructure for the next release is
+being prepared; credentials and real distribution verification are pending.
+See [signing requirements](../tools/release/SIGNING.md).
+
 | Channel | Verified state |
 |---|---|
 | GitHub Releases | Native macOS ARM64, Linux x86-64/ARM64, and Windows x86-64 archives, per-archive checksums, combined SHA256SUMS, and embedded source provenance |

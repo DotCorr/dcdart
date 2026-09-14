@@ -4,6 +4,11 @@ on:
     branches: [codex/dcdart-web-playground]
     paths: ['tools/release/**', 'core/**', '.github/workflows/release-hosts.yml']
   workflow_dispatch:
+    inputs:
+      distribution_trust:
+        description: Require macOS signing/notarization and Windows Authenticode (credentials required)
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -13,7 +18,10 @@ jobs:
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm, windows-latest, macos-15]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,7 +57,62 @@ jobs:
           cp core/scripts/vendor-frontend.sh release-src/core/scripts/vendor-frontend.sh
           bash release-src/core/scripts/vendor-frontend.sh
       - name: Build packaged compiler and execute native smoke test
-        run: python tools/release/package.py release-src dist
+        run: python tools/release/package.py release-src dist --stage-only
+      - name: Locate verified staging directory
+        id: stage
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          stages = list(Path('dist').glob('dcdart-*/provenance.json'))
+          assert len(stages) == 1, stages
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('path=' + stages[0].parent.as_posix() + '\n')
+          PY
+      - name: Sign and notarize macOS distribution
+        if: inputs.distribution_trust && runner.os == 'macOS'
+        shell: bash
+        env:
+          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ vars.APPLE_SIGNING_IDENTITY }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          APPLE_NOTARY_KEY_BASE64: ${{ secrets.APPLE_NOTARY_KEY_BASE64 }}
+          APPLE_NOTARY_KEY_ID: ${{ vars.APPLE_NOTARY_KEY_ID }}
+          APPLE_NOTARY_ISSUER: ${{ vars.APPLE_NOTARY_ISSUER }}
+          STAGE: ${{ steps.stage.outputs.path }}
+        run: bash tools/release/sign-macos.sh "$STAGE"
+      - name: Authenticate Windows signing through OIDC
+        if: inputs.distribution_trust && runner.os == 'Windows'
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Sign Windows distribution
+        if: inputs.distribution_trust && runner.os == 'Windows'
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2
+        with:
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}/${{ steps.stage.outputs.path }}/core/dcc/bin
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+      - name: Verify final executable and package final bytes
+        shell: bash
+        env:
+          REQUIRE_TRUST: ${{ inputs.distribution_trust }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          DCDART_WINDOWS_PUBLISHER: ${{ vars.DCDART_WINDOWS_PUBLISHER }}
+          STAGE: ${{ steps.stage.outputs.path }}
+        run: |
+          args=()
+          if [ "$REQUIRE_TRUST" = true ]; then args+=(--require-trust); fi
+          python tools/release/finalize.py "$STAGE" "${args[@]}"
       - name: Run compiler conformance and optimizer tests
         if: runner.os != 'Windows'
         shell: bash
@@ -64,7 +127,7 @@ jobs:
           (cd core/backend && dart test)
       - uses: actions/upload-artifact@v4
         with:
-          name: dcdart-${{ matrix.os }}
+          name: dcdart-${{ inputs.distribution_trust && 'distribution' || 'development' }}-${{ matrix.os }}
           path: |
             dist/*.tar.gz
             dist/*.zip

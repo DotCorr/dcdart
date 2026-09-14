@@ -43,6 +43,7 @@ for suite, source in [('temporary-ownership','temporary'), ('boolean','boolean')
         if suite in ('signed-int', 'compare-exchange', 'shift-boundaries', 'null-safety'): run([sys.executable,case/'check-traps.py',exe])
 run([sys.executable, root/'core/tests/conformance/shared-heap/check.py', binary])
 (stage/'provenance.json').write_text(json.dumps({'tag':tag,'commit':sha,'host':host,'dart':subprocess.check_output([dart,'--version'],text=True).strip(),'validation':'Packaged dcc compiled and linked a C host; sumTo(100) executed and returned 4950.'},indent=2)+'\n')
-archive=Path(shutil.make_archive(str(out/name),'zip' if windows else 'gztar',root_dir=out,base_dir=name))
-(out/(archive.name+'.sha256')).write_text(hashlib.sha256(archive.read_bytes()).hexdigest()+'  '+archive.name+'\n')
-print('VERIFIED', archive)
+if '--stage-only' in sys.argv[3:]:
+    print('VERIFIED STAGING DIRECTORY', stage)
+else:
+    run([sys.executable, Path(__file__).with_name('finalize.py'), stage])
