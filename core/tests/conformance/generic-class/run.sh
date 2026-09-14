@@ -161,11 +161,11 @@ arc_is() {
 
 # A value-typed instantiation: one Alloc, one Release, and NOTHING else.
 # A retain here would mean the box's own integer field was being ARC'd.
-arc_is 'boxU64'      'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=0'
-arc_is 'boxU32'      'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=0'
-arc_is 'boxU64Field' 'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=0'
-arc_is 'boxU32Field' 'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=0'
-arc_is 'boxBoth'     'alloc=2 retain=0 release=2 makeweak=0 weakload=0 dropweak=0'
+arc_is 'boxU64'      'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'boxU32'      'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'boxU64Field' 'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'boxU32Field' 'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'boxBoth'     'alloc=2 retain=0 release=2 makeweak=0 weakload=0 dropweak=0 retainweak=0'
 
 # The reference-typed instantiation, where the shape genuinely differs.
 # Derivation, because this is the one number that is not obvious and the one
@@ -254,11 +254,11 @@ arc_is 'boxBoth'     'alloc=2 retain=0 release=2 makeweak=0 weakload=0 dropweak=
 # release pair elides). unwrap retains the child once; caller cleanup drops
 # that returned reference and the Box. Box destruction drops the field's
 # reference. The final field read occurs before either caller release.
-arc_is 'boxNode'     'alloc=2 retain=0 release=2 makeweak=0 weakload=0 dropweak=0'
-arc_is 'Box\$Node_dtor' 'alloc=0 retain=0 release=1 makeweak=0 weakload=0 dropweak=0'
-arc_is 'Box\$u64_unwrap'  'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0'
-arc_is 'Box\$u32_unwrap'  'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0'
-arc_is 'Box\$Node_unwrap' 'alloc=0 retain=1 release=0 makeweak=0 weakload=0 dropweak=0'
+arc_is 'boxNode'     'alloc=2 retain=0 release=2 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'Box\$Node_dtor' 'alloc=0 retain=0 release=1 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'Box\$u64_unwrap'  'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'Box\$u32_unwrap'  'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'Box\$Node_unwrap' 'alloc=0 retain=1 release=0 makeweak=0 weakload=0 dropweak=0 retainweak=0'
 echo "  ARC counts ok: value-typed instantiations carry no retain at all, Box\$Node_dtor releases exactly its one heap field"
 
 # ---------------------------------------------------------------------------

@@ -214,13 +214,13 @@ arc_is() {
   [[ "$got" == "$want" ]] || fail "ARC counts for \"$fn\": expected [$want], got [$got]"
 }
 
-arc_is 'tlookup'    'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0'
-arc_is 'chainSum'   'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0'
-arc_is 'valueSum'   'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0'
-arc_is 'buildTrie'  'alloc=2 retain=0 release=0 makeweak=0 weakload=0 dropweak=0'
-arc_is 'tinsert'    'alloc=0 retain=4 release=6 makeweak=0 weakload=0 dropweak=0'
-arc_is 'unlinkFrom' 'alloc=0 retain=2 release=4 makeweak=0 weakload=0 dropweak=0'
-arc_is 'mapInsert'  'alloc=6 retain=3 release=6 makeweak=0 weakload=0 dropweak=0'
+arc_is 'tlookup'    'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'chainSum'   'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'valueSum'   'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'buildTrie'  'alloc=2 retain=0 release=0 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'tinsert'    'alloc=0 retain=4 release=6 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'unlinkFrom' 'alloc=0 retain=2 release=4 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'mapInsert'  'alloc=6 retain=3 release=6 makeweak=0 weakload=0 dropweak=0 retainweak=0'
 echo "  ARC counts pinned: lookup path retain-free, mutating path's GAP-0067 pairs intact"
 
 echo "HASHMAP-BENCH: PASS — one map implementation, 8 implementations agreeing at 4 round counts, no leak, inside the shipping default heap, both @bare objects freestanding, ARC counts pinned"

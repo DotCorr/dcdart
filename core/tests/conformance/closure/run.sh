@@ -154,8 +154,8 @@ $ARC"
 # live retain/release pair. It must not -- ADR-0031's call-consumed case is
 # exactly what removes it, and that is what "identical" is being measured
 # against.
-[[ "$TOP" == "alloc=1 retain=0 release=0 makeweak=0 weakload=0 dropweak=0" ]] \
-  || fail "viaTopLevel's ARC counts are \"$TOP\", expected \"alloc=1 retain=0 release=0 makeweak=0 weakload=0 dropweak=0\" — if the retain/release pair is still present, the equality check above is comparing two UNELIDED programs and proves nothing"
+[[ "$TOP" == "alloc=1 retain=0 release=0 makeweak=0 weakload=0 dropweak=0 retainweak=0" ]] \
+  || fail "viaTopLevel's ARC counts are \"$TOP\", expected \"alloc=1 retain=0 release=0 makeweak=0 weakload=0 dropweak=0 retainweak=0\" — if the retain/release pair is still present, the equality check above is comparing two UNELIDED programs and proves nothing"
 # The other ARC direction: a local function that CONSTRUCTS and returns the
 # object. Ownership must transfer out of it unreleased, exactly as out of the
 # top-level spelling -- a mismatch here is a retain the caller does not own.

@@ -12,4 +12,6 @@ if dart "$CORE/dcc/bin/dcc.dart" build --mode bare --target host "$HERE/wrong-co
   exit 1
 fi
 grep -q 'differ ONLY in ARC convention' "$TMP/rejection"
+dart "$CORE/dc-objdump/bin/dc_objdump.dart" --arc "$HERE/alias.dart" > "$TMP/arc"
+grep -Eq 'retainweak=[1-9][0-9]*' "$TMP/arc"
 echo 'WEAK ALIAS: PASS — live/dead aliases, borrowed returns and owned arguments'

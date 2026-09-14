@@ -174,12 +174,12 @@ arc_is() {
   [[ "$got" == "$want" ]] || fail "ARC counts for \"$fn\": expected [$want], got [$got]"
 }
 
-arc_is 'liveChain'    'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=0'
-arc_is 'forChain'     'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=0'
-arc_is 'withContinue' 'alloc=1 retain=0 release=2 makeweak=0 weakload=0 dropweak=0'
-arc_is 'withBreak'    'alloc=1 retain=0 release=2 makeweak=0 weakload=0 dropweak=0'
-arc_is 'withReturn'   'alloc=1 retain=0 release=2 makeweak=0 weakload=0 dropweak=0'
-arc_is 'nested'       'alloc=2 retain=0 release=2 makeweak=0 weakload=0 dropweak=0'
+arc_is 'liveChain'    'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'forChain'     'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'withContinue' 'alloc=1 retain=0 release=2 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'withBreak'    'alloc=1 retain=0 release=2 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'withReturn'   'alloc=1 retain=0 release=2 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'nested'       'alloc=2 retain=0 release=2 makeweak=0 weakload=0 dropweak=0 retainweak=0'
 # CHANGED BY ADR-0066 (rule N) from retain=2: `Node? keep = null` emits a
 # `Retain <NullRef>` for the null initializer, and dc_retain(null) is a
 # DEFINED no-op (ADR-0049), so the instruction is now deleted outright.
@@ -204,7 +204,7 @@ arc_is 'nested'       'alloc=2 retain=0 release=2 makeweak=0 weakload=0 dropweak
 # it. The pair that must NEVER cancel this way stays pinned in
 # tests/conformance/fresh-return/ (nonFreshShape, retain=1) and in
 # elide-alias's aliasBug (a Load-defined value is never fresh).
-arc_is 'lastKept'     'alloc=1 retain=0 release=3 makeweak=0 weakload=0 dropweak=0'
+arc_is 'lastKept'     'alloc=1 retain=0 release=3 makeweak=0 weakload=0 dropweak=0 retainweak=0'
 
 # VACUOUS-PASS GUARD. Every assertion above is an equality against a string,
 # so a `dc-objdump` that printed nothing at all would have been caught by the
@@ -215,7 +215,7 @@ arc_is 'lastKept'     'alloc=1 retain=0 release=3 makeweak=0 weakload=0 dropweak
 # the six other functions are byte-identical, which is what says this is the
 # freshness rule firing on the one Alloc-fresh pair and not the pass going
 # quiet.
-arc_is 'TOTAL' 'alloc=8 retain=0 release=13 makeweak=0 weakload=0 dropweak=0'
+arc_is 'TOTAL' 'alloc=8 retain=0 release=13 makeweak=0 weakload=0 dropweak=0 retainweak=0'
 
 echo "  ARC ok: every path out of every loop body carries its own release"
 

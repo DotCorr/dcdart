@@ -91,7 +91,7 @@ arc_is() {
 # it — retain=0 release=2. The surviving foreign release plus a Load sit
 # INSIDE the pair, so this zero is reachable only through the freshness
 # fact (ADR-0063 refused it; ADR-0068's adjacency cannot see past the use).
-arc_is 'freshShape' 'alloc=0 retain=0 release=2 makeweak=0 weakload=0 dropweak=0'
+arc_is 'freshShape' 'alloc=0 retain=0 release=2 makeweak=0 weakload=0 dropweak=0 retainweak=0'
 
 # THE REFUSED PAIR — the anti-unsoundness guard, this target's real point.
 # Identical caller shape; the callee stored its result into a heap field
@@ -99,7 +99,7 @@ arc_is 'freshShape' 'alloc=0 retain=0 release=2 makeweak=0 weakload=0 dropweak=0
 # release must clear the pending retain exactly as ADR-0063 rules.
 # retain=1. A zero here means the summary waved through an aliased return
 # value: a latent use-after-free, not a better optimizer. STOP THE LINE.
-arc_is 'nonFreshShape' 'alloc=1 retain=1 release=4 makeweak=0 weakload=0 dropweak=0'
+arc_is 'nonFreshShape' 'alloc=1 retain=1 release=4 makeweak=0 weakload=0 dropweak=0 retainweak=0'
 
 # The summary's own subjects, pinned so a lowering change that silently
 # adds an escape (or an ARC op) to them is visible here rather than only as
@@ -107,10 +107,10 @@ arc_is 'nonFreshShape' 'alloc=1 retain=1 release=4 makeweak=0 weakload=0 dropwea
 # and mkStored keeps its genuine field-store retain (its own pending retain
 # is releaseLimited against the old-value release — an unrelated,
 # pre-existing refusal this target does not claim).
-arc_is 'mkNode'    'alloc=1 retain=0 release=0 makeweak=0 weakload=0 dropweak=0'
-arc_is 'mkWrapped' 'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0'
-arc_is 'mkStored'  'alloc=1 retain=1 release=1 makeweak=0 weakload=0 dropweak=0'
-arc_is 'TOTAL'     'alloc=3 retain=2 release=8 makeweak=0 weakload=0 dropweak=0'
+arc_is 'mkNode'    'alloc=1 retain=0 release=0 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'mkWrapped' 'alloc=0 retain=0 release=0 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'mkStored'  'alloc=1 retain=1 release=1 makeweak=0 weakload=0 dropweak=0 retainweak=0'
+arc_is 'TOTAL'     'alloc=3 retain=2 release=8 makeweak=0 weakload=0 dropweak=0 retainweak=0'
 
 # The attribution, pinned too: --why must say the freshness rule fired
 # exactly once (freshShape) and that nonFreshShape died releaseLimited —

@@ -109,7 +109,7 @@ arc_is() {
 # value, which is THE SAME OBJECT under a different DCValue. retain=1 is
 # the assertion: before ADR-0063 this read retain=0, and that zero was the
 # use-after-free.
-arc_is 'aliasBug' 'alloc=5 retain=1 release=5 makeweak=0 weakload=0 dropweak=0'
+arc_is 'aliasBug' 'alloc=5 retain=1 release=5 makeweak=0 weakload=0 dropweak=0 retainweak=0'
 
 # releaseThroughDestructor. COUNT RE-PINNED retain=1 -> retain=0 by
 # ADR-0068's run-atomic release matching, and the justification is owed in
@@ -142,7 +142,7 @@ arc_is 'aliasBug' 'alloc=5 retain=1 release=5 makeweak=0 weakload=0 dropweak=0'
 #   aliasBugNullable above (retain=1, the actual 198-vs-110 miscompilation
 #   shapes) are the assertion of that, together with dc-elide's own
 #   "use between the releases" negative unit test.
-arc_is 'releaseThroughDestructor' 'alloc=2 retain=0 release=1 makeweak=0 weakload=0 dropweak=0'
+arc_is 'releaseThroughDestructor' 'alloc=2 retain=0 release=1 makeweak=0 weakload=0 dropweak=0 retainweak=0'
 
 # --- The pair that MUST STILL BE ELIDED. ----------------------------------
 #
@@ -152,7 +152,7 @@ arc_is 'releaseThroughDestructor' 'alloc=2 retain=0 release=1 makeweak=0 weakloa
 # retain=1, the fix has been widened into "disable elision", which would
 # pass every correctness check in the suite while costing real performance
 # on every benchmark.
-arc_is 'stillElided' 'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=0'
+arc_is 'stillElided' 'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=0 retainweak=0'
 
 # --- The nullable variant, unchanged by ADR-0063. --------------------------
 #
@@ -160,12 +160,12 @@ arc_is 'stillElided' 'alloc=1 retain=0 release=1 makeweak=0 weakload=0 dropweak=
 # test to dereference, the test is a CondBranch, and pass 3 is single-block
 # -- so the retain and its release were never in the same block and were
 # never candidates. It was never nullability that made this safe.
-arc_is 'aliasBugNullable' 'alloc=5 retain=1 release=9 makeweak=0 weakload=0 dropweak=0'
+arc_is 'aliasBugNullable' 'alloc=5 retain=1 release=9 makeweak=0 weakload=0 dropweak=0 retainweak=0'
 
 # retain 3 -> 2, release 19 -> 18: releaseThroughDestructor's pair now
 # cancels (ADR-0068, justified at its own assertion above); aliasBug and
 # aliasBugNullable are byte-for-byte unchanged.
-arc_is 'TOTAL' 'alloc=13 retain=2 release=18 makeweak=0 weakload=0 dropweak=0'
+arc_is 'TOTAL' 'alloc=13 retain=2 release=18 makeweak=0 weakload=0 dropweak=0 retainweak=0'
 echo "  ARC counts ok: the aliasing pairs survive, and stillElided is still elided"
 
 # ---------------------------------------------------------------------------

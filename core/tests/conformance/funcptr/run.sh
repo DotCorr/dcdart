@@ -141,7 +141,7 @@ arc_counts() {
   grep -E "^  $1: " <<<"$ARC" | sed "s/^  $1: //"
 }
 
-ELIDED="alloc=1 retain=0 release=0 makeweak=0 weakload=0 dropweak=0"
+ELIDED="alloc=1 retain=0 release=0 makeweak=0 weakload=0 dropweak=0 retainweak=0"
 
 # All four spellings of the same program, asserted against the ABSOLUTE elided
 # counts rather than only against each other -- four unelided programs would
@@ -165,7 +165,7 @@ echo "  elision ok: all four spellings elide the @owned pair — an indirect cal
 # free the object while a live alias still points at it; "fewer retains" is not
 # by itself the property being asserted.
 BORROW="$(arc_counts 'borrowViaFuncPtr')"
-BORROW_WANT="alloc=1 retain=1 release=2 makeweak=0 weakload=0 dropweak=0"
+BORROW_WANT="alloc=1 retain=1 release=2 makeweak=0 weakload=0 dropweak=0 retainweak=0"
 [[ "$BORROW" == "$BORROW_WANT" ]] \
   || fail "borrowViaFuncPtr's ARC counts are \"$BORROW\", expected \"$BORROW_WANT\" — a BORROWED indirect call's retain/release pair is load-bearing and must survive elision"
 echo "  elision ok: the borrowed direction's pair survives, so the elision above is selective, not blanket"
