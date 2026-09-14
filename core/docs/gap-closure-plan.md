@@ -181,3 +181,7 @@ publication gate, and later changes require newer evidence.
 - Generic method-result receivers (ADR-0098 / GAP-0056): chained generic
   results now resolve both class and method bindings, with owned/borrowed and
   nested-generic regressions. Other receiver shapes remain open.
+
+- Local/callback result receivers (ADR-0099 / GAP-0056): named and anonymous
+  local results, inferred function-pointer results and generic callback-parameter
+  results support chained methods. Other expression shapes remain open.

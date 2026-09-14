@@ -44,3 +44,19 @@ require their own later platform results.
 Release completion still requires a new immutable version, package-manager
 manifests, live playground deployment and synchronized website/docs verification.
 The full gap-closure worklist remains active.
+
+## Weak-field checkpoint
+
+Source: `391c473fc49a3bb39ff934166080065ce9cf0245`.
+[Run 34792933946](https://github.com/DotCorr/dcdart/actions/runs/34792933946)
+passed all four hosts. Inspected job logs show 67 conformance suites, zero
+failures and zero skips, 52 optimizer tests and 17 backend tests on macOS ARM64,
+Linux x64 and Linux ARM64. Windows passed its packaged-compiler checks; its job
+does not run the full conformance or Dart unit suites.
+
+This checkpoint includes local call statements, boolean signatures, Null returns,
+discarded direct results, weak aliases, inferred owned weak callbacks and weak
+heap fields (ADRs 0089–0095). Exact ARC expectations include retainweak. Earlier
+runs of the initial weak-alias commit failed those old text expectations; this
+checkpoint includes their correction. Mutable weak locals, null assertions and
+later receiver changes require their own newer results. All remain unreleased.

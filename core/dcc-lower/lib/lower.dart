@@ -4921,6 +4921,16 @@ class _BareFunctionLowerer {
     if (receiver is NullCheck) return _receiverInstanceOrNull(receiver.operand);
     if (receiver is ThisExpression) return receiverInstance;
     if (receiver is VariableGet) return _instanceFromType(receiver.variable.type);
+    if (receiver is LocalFunctionInvocation || receiver is FunctionInvocation) {
+      final local = _calleeOf(receiver);
+      if (local != null) return _instanceFromType(local.node.returnType);
+      if (receiver is FunctionInvocation && receiver.receiver is VariableGet) {
+        final variable = (receiver.receiver as VariableGet).variable;
+        final signature = _substituteType(variable.type, typeSubstitution);
+        if (signature is FunctionType) return _instanceFromType(signature.returnType);
+      }
+      return null;
+    }
     if (receiver is StaticInvocation) {
       final parameters = receiver.target.function.typeParameters;
       final arguments = receiver.arguments.types;

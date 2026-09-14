@@ -14,6 +14,10 @@ class Carrier<T> extends HeapObject {
 }
 @bare
 u64 exercise() {
+  Carrier<u64> local() => Carrier<u64>(u64(2));
+  final anonymous = () => Carrier<u64>(u64(3));
+  final pointer = factory;
+  final additional = local().payload() + anonymous().payload() + pointer().payload();
   final a = Carrier<u64>(u64(40));
   a.touch();
   a.consume<Carrier<u32>>(Carrier<u32>(u32(8)));
@@ -25,7 +29,7 @@ u64 exercise() {
   final b = Carrier<u32>(u32(3));
   final c = a.echo<Carrier<u32>>(Carrier<u32>(u32(2)));
   final d = a.take<Carrier<u64>>(Carrier<u64>(u64(4)));
-  return nested<u64>(u64(5)) + a.take<Carrier<u64>>(Carrier<u64>(u64(17))).payload() + a.echo<Carrier<u32>>(Carrier<u32>(u32(13))).payload().toU64() + c.payload().toU64() + d.payload() + a.echo<u64>(u64(7)) + a.forward<u32>(u32(9)).toU64()
+  return fromCallback<u64>(factory) + additional + nested<u64>(u64(5)) + a.take<Carrier<u64>>(Carrier<u64>(u64(17))).payload() + a.echo<Carrier<u32>>(Carrier<u32>(u32(13))).payload().toU64() + c.payload().toU64() + d.payload() + a.echo<u64>(u64(7)) + a.forward<u32>(u32(9)).toU64()
       + a.shadow<u32>(u32(11)).toU64() + a.payload()
       + b.echo<u64>(u64(5)) + b.payload().toU64();
 }
@@ -41,3 +45,7 @@ U nested<U>(U input) {
   final a = Carrier<u64>(u64(1));
   return a.shadow<Carrier<U>>(Carrier<U>(input)).payload();
 }
+
+@bare Carrier<u64> factory() => Carrier<u64>(u64(7));
+
+@bare T fromCallback<T>(Carrier<T> Function() create) => create().payload();
