@@ -647,6 +647,9 @@ void _emitInstruction(DCInstruction instruction, _FunctionEmitter e, {required S
       final addrType = _llvmType(instruction.address.type, context: context);
       e.line('%v${instruction.dest.id.index} = inttoptr $addrType %v${instruction.address.id.index} to ptr');
     case PtrOffset():
+      if (instruction.base.type is DCHeapPointer) {
+        _emitNonNullGuard(instruction.base, e);
+      }
       e.line(
         '%v${instruction.dest.id.index} = getelementptr i8, ptr '
         '%v${instruction.base.id.index}, i64 ${instruction.offsetBytes}',
@@ -791,16 +794,7 @@ void _emitInstruction(DCInstruction instruction, _FunctionEmitter e, {required S
       if (instruction.object.type is! DCHeapPointer) {
         throw BackendError('$context: AssertNonNull requires a heap reference');
       }
-      final missing = e.freshName('nullassert');
-      final trap = e.freshLabel('nulltrap');
-      final valid = e.freshLabel('nonnull');
-      e.line('%$missing = icmp eq ptr %v${instruction.object.id.index}, null');
-      e.terminate('br i1 %$missing, label %$trap, label %$valid');
-      e.startBlock(trap);
-      declareTrapIntrinsic(e.declaredIntrinsics);
-      e.line('call void @llvm.trap()');
-      e.terminate('unreachable');
-      e.startBlock(valid);
+      _emitNonNullGuard(instruction.object, e);
     case RetainWeak():
       _emitWeakRetain(instruction.object, e);
     case MakeWeak():
@@ -2071,6 +2065,19 @@ void _emitMakeWeak(MakeWeak instruction, _FunctionEmitter e, String context) {
   e.line(
     '%v${instruction.dest.id.index} = getelementptr i8, ptr %v${instruction.object.id.index}, i64 0',
   );
+}
+
+void _emitNonNullGuard(DCValue object, _FunctionEmitter e) {
+  final missing = e.freshName('nullassert');
+  final trap = e.freshLabel('nulltrap');
+  final valid = e.freshLabel('nonnull');
+  e.line('%$missing = icmp eq ptr %v${object.id.index}, null');
+  e.terminate('br i1 %$missing, label %$trap, label %$valid');
+  e.startBlock(trap);
+  declareTrapIntrinsic(e.declaredIntrinsics);
+  e.line('call void @llvm.trap()');
+  e.terminate('unreachable');
+  e.startBlock(valid);
 }
 
 void _emitWeakRetain(DCValue object, _FunctionEmitter e) {

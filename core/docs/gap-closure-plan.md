@@ -193,3 +193,7 @@ publication gate, and later changes require newer evidence.
 - Conditional actions (ADR-0101): void/value statement arms, discarded
   temporary cleanup and assignment discovery implemented with loop tests.
   Assignment expressions used as values remain open; platform checks pending.
+
+- Foreign null field access (ADR-0102 / GAP-0038): explicit null traps added
+  for managed field reads/writes with C regressions. Arbitrary non-null pointer
+  validity and lifetime defense remain open; platform checks pending.

@@ -674,8 +674,9 @@ before lowering and accepts a dereference following `if (x == null) return ...`.
 checked path, including null passed to a nullable C ABI parameter.
 
 This is not a guarantee for arbitrary C callers: a foreign caller can violate a non-null
-heap parameter's contract, and field addressing still has no explicit runtime null trap.
-Pointer validity and lifetime at that boundary remain the caller's responsibility. A
+heap parameter's contract. ADR-0102 adds a checked null trap before managed field
+addressing; forged non-null pointer validity and lifetime at that boundary remain
+the caller's responsibility. A
 future defense must distinguish that boundary issue from source-level flow checking.
 
 ---
