@@ -1189,6 +1189,9 @@ class _BareFunctionLowerer {
     final fn = hoisted == null ? proc.function : hoisted.node;
     if (hoisted != null) _localFunctions.addAll(hoisted.visibleLocalFunctions);
 
+    final parameterRetains = <DCInstruction>[];
+    final reassigned = <VariableDeclaration>{};
+    if (fn.body != null) _collectLoopCarriedCandidates(fn.body!, reassigned);
     final paramTypes = <DCType>[];
     final paramValues = <DCValue>[];
 
@@ -1211,6 +1214,18 @@ class _BareFunctionLowerer {
       _values[param] = value;
       paramTypes.add(type);
       paramValues.add(value);
+      // A mutable borrowed parameter becomes an independently owned local.
+      // Acquire at entry so every branch has the same cleanup obligation.
+      if (reassigned.contains(param) &&
+          !_hasMarkerAnnotation(param.annotations, '_Owned', preludeUri)) {
+        if (type is DCHeapPointer) {
+          parameterRetains.add(Retain(object: value));
+          _heapLocals.add(param);
+        } else if (type is DCWeakPointer) {
+          parameterRetains.add(RetainWeak(object: value));
+          _weakLocals.add(param);
+        }
+      }
       // (M2, ADR-0021) `@owned` (spec §3.2 item 2: "Only @owned params
       // transfer") -- every other HeapObject-typed parameter is borrowed
       // by default (ADR-0019) and never tracked. An `@owned` parameter IS
@@ -1241,6 +1256,7 @@ class _BareFunctionLowerer {
     _returnsNull = _resolveTypeParameter(fn.returnType) is NullType;
 
     _startBlock(_allocBlockId(), paramValues);
+    for (final retain in parameterRetains) _addInstr(retain);
 
     final body = fn.body;
     if (body is ReturnStatement) {
@@ -1435,18 +1451,20 @@ class _BareFunctionLowerer {
         // store: retain the new value unless it is already a fresh +1,
         // then release the old one. Retain-before-release so `x = x` cannot
         // free the object between the two steps.
-        if (oldValue.type is DCHeapPointer) {
+        if (oldValue.type is DCHeapPointer || oldValue.type is DCWeakPointer) {
           final newValue = _lowerExpression(expr.value);
-          if (newValue.type is! DCHeapPointer) {
+          if (newValue.type != oldValue.type) {
             throw DccLowerError(
               '"$context": assigning ${newValue.type} to heap-typed local '
               '"${variable.name}"',
             );
           }
           if (!_isFreshHeapOwnership(expr.value)) {
-            _addInstr(Retain(object: newValue));
+            _addInstr(oldValue.type is DCWeakPointer
+                ? RetainWeak(object: newValue) : Retain(object: newValue));
           }
-          _addInstr(Release(object: oldValue));
+          _addInstr(oldValue.type is DCWeakPointer
+              ? DropWeak(object: oldValue) : Release(object: oldValue));
           _values[variable] = newValue;
           return;
         }
@@ -1782,7 +1800,8 @@ class _BareFunctionLowerer {
       final mergeType = valuesBeforeIf[v]!.type;
       // DCFloat allowed alongside DCInt (ADR-0065): same scalar-merge
       // mechanics, the block param just carries a float type.
-      if (!_isUnmanagedScalar(mergeType)) {
+      if (!_isUnmanagedScalar(mergeType) &&
+          mergeType is! DCHeapPointer && mergeType is! DCWeakPointer) {
         throw DccLowerError(
           '"$context": "${v.name}" (type $mergeType) is reassigned in a '
           'branch of this if/else that falls through -- only scalar '
@@ -2015,7 +2034,7 @@ class _BareFunctionLowerer {
       // (`sum = sum + a[i] * b[i]`) is the defining loop-carried value of
       // every ML kernel this feature exists for.
       if (!_isUnmanagedScalar(current.type) &&
-          current.type is! DCHeapPointer) {
+          current.type is! DCHeapPointer && current.type is! DCWeakPointer) {
         throw DccLowerError(
           '"$context": loop-carried variable "${v.name}" has type '
           '${current.type} — only unmanaged scalar and heap-typed '
@@ -2215,6 +2234,8 @@ class _BareFunctionLowerer {
   /// loops (and composing a loop's own header merge with an if/else merge
   /// in the same pass) are real, separate, unimplemented work.
   void _collectLoopCarriedCandidates(Statement stmt, Set<VariableDeclaration> out) {
+    // Local function bodies run in their own scope; captures are checked separately.
+    if (stmt is FunctionDeclaration) return;
     if (stmt is Block) {
       for (final s in stmt.statements) {
         _collectLoopCarriedCandidates(s, out);

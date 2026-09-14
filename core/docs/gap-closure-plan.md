@@ -169,3 +169,7 @@ publication gate, and later changes require newer evidence.
 - Weak managed fields (ADR-0095 / GAP-0020): layout, construction, replacement,
   temporary-owner loads and destructor cleanup implemented with regressions.
   Mutable weak locals remain open; platform checks pending.
+
+- Mutable weak locals (ADR-0096): reassignment, loop/branch ownership and
+  borrowed managed-parameter replacement implemented and tested locally.
+  General assignment expressions remain separate; platform checks pending.

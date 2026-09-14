@@ -81,3 +81,28 @@ u64 fields() {
   Holder(dead()).ref = alias;
   return genericValue.n;
 }
+
+@bare
+u64 mutable(u64 n) {
+  var current = dead();
+  final box = Box(u64(31));
+  final live = Weak<Box>.fromStrong(box);
+  for (var i = u64(0); i < n; i = i + u64(1)) {
+    if ((i & u64(1)) == u64(0)) { current = live; }
+    else { current = dead(); }
+    current = current;
+  }
+  current = live;
+  replaceBorrow(current, n);
+  replaceStrong(box, n);
+  final value = current.value;
+  if (value == null) return u64(0);
+  return value.n;
+}
+
+@bare void replaceBorrow(Weak<Box> value, u64 n) {
+  if (n > u64(2)) value = dead();
+}
+@bare void replaceStrong(Box value, u64 n) {
+  if (n > u64(2)) value = Box(u64(99));
+}
