@@ -27,6 +27,15 @@ fi
 
 codesign --force --options runtime --timestamp --sign "$identity" "$binary"
 codesign --verify --strict --verbose=2 "$binary"
+python3 - "$work/$stem/provenance.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+data = json.loads(path.read_text())
+data['signed'] = True
+path.write_text(json.dumps(data, indent=2) + '\n')
+PY
 zip_path="$(dirname "$archive")/$stem-notarized.zip"
 if [[ -e "$zip_path" ]]; then
   echo "Output already exists: $zip_path" >&2
