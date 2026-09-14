@@ -4948,10 +4948,16 @@ class _BareFunctionLowerer {
       final target = receiver.interfaceTarget;
       final owner = _ownerInstanceOf(target, receiver.receiver);
       if (owner == null) return null;
-      // The method's return type is written in terms of the OWNER's type
-      // parameters, so it resolves against the owner's substitution -- the
-      // class-level twin of ADR-0052's `_lowerCalleeType` problem.
-      return _instanceFromType(_substituteType(target.function.returnType, owner.substitution));
+      // A method result depends on both receiver and method type arguments.
+      // Parameter identity keeps shadowed class/method names distinct.
+      final parameters = target.function.typeParameters;
+      final arguments = receiver.arguments.types;
+      if (parameters.length != arguments.length) return null;
+      final bindings = {...owner.substitution};
+      for (var i = 0; i < parameters.length; i++) {
+        bindings[parameters[i]] = _resolveTypeParameter(arguments[i]);
+      }
+      return _instanceFromType(_substituteType(target.function.returnType, bindings));
     }
     return null;
   }

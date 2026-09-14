@@ -177,3 +177,7 @@ publication gate, and later changes require newer evidence.
 - Null assertions (ADR-0097): heap-reference assertions preserve ownership
   and produce checked traps on null. Static-call generic receiver recovery is
   implemented. Other nullable representations remain open; platform checks pending.
+
+- Generic method-result receivers (ADR-0098 / GAP-0056): chained generic
+  results now resolve both class and method bindings, with owned/borrowed and
+  nested-generic regressions. Other receiver shapes remain open.

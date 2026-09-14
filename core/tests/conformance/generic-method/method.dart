@@ -25,7 +25,7 @@ u64 exercise() {
   final b = Carrier<u32>(u32(3));
   final c = a.echo<Carrier<u32>>(Carrier<u32>(u32(2)));
   final d = a.take<Carrier<u64>>(Carrier<u64>(u64(4)));
-  return c.payload().toU64() + d.payload() + a.echo<u64>(u64(7)) + a.forward<u32>(u32(9)).toU64()
+  return nested<u64>(u64(5)) + a.take<Carrier<u64>>(Carrier<u64>(u64(17))).payload() + a.echo<Carrier<u32>>(Carrier<u32>(u32(13))).payload().toU64() + c.payload().toU64() + d.payload() + a.echo<u64>(u64(7)) + a.forward<u32>(u32(9)).toU64()
       + a.shadow<u32>(u32(11)).toU64() + a.payload()
       + b.echo<u64>(u64(5)) + b.payload().toU64();
 }
@@ -34,4 +34,10 @@ u64 exercise() {
 void writeResult(Pointer<u64> output) {
   final a = Carrier<u64>(u64(1));
   a.write<u64>(output, u64(123));
+}
+
+@bare
+U nested<U>(U input) {
+  final a = Carrier<u64>(u64(1));
+  return a.shadow<Carrier<U>>(Carrier<U>(input)).payload();
 }
