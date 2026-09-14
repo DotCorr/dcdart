@@ -1588,31 +1588,13 @@ class _BareFunctionLowerer {
           return;
         }
 
-        // (ADR-0038) A call, as a statement, to a `@bare` sibling or an
-        // `@extern` C symbol. This is where a void-returning callee is
-        // finally reachable in general — ADR-0018 recorded the gap, ADR-0029
-        // opened a single hardcoded hole in it for `Port.outb`, and `void`
-        // being the single most common C return type is what made the
-        // general case worth building.
-        //
-        // VOID ONLY, deliberately. Discarding a non-void result is legal
-        // Dart, but a discarded `HeapObject` return is a leak under this
-        // project's naive release policy (ADR-0016: only values bound to a
-        // tracked local are ever released), and silently leaking is worse
-        // than refusing. Scalar discards are refused too, for one rule
-        // instead of two — bind the result to a local, which costs nothing.
+        // Direct calls use the same ownership cleanup as local/indirect
+        // calls: an ignored returned reference is still owned by this caller.
         final isBare = _hasMarkerAnnotation(target.annotations, '_Bare', preludeUri);
         final isExtern = _hasMarkerAnnotation(target.annotations, '_Extern', preludeUri);
         if (isBare || isExtern) {
-          if (target.function.returnType is! VoidType) {
-            throw DccLowerError(
-              '"$context": "${target.name.text}" returns a value, but its '
-              'result is discarded here — bind it to a local '
-              '(`final _unused = ${target.name.text}(...);`). Only '
-              'void-returning calls may stand alone as a statement',
-            );
-          }
-          _lowerCallTo(expr, target, allowVoid: true);
+          final result = _lowerCallTo(expr, target, allowVoid: true);
+          if (result != null) _releaseTemporary(expr, result);
           return;
         }
       }

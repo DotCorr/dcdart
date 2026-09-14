@@ -153,3 +153,7 @@ publication gate, and later changes require newer evidence.
   implemented; equality capture scanning repaired. Boolean signatures and
   capture scanning are implemented in ADR-0090; inferred/declared Null returns
   in ADR-0091. Capturing environments remain open; platform checks pending.
+
+- Direct call statements (ADR-0092): discarded heap/weak/null/scalar returns
+  are supported with ownership cleanup. Native regression passes locally;
+  platform checks pending.

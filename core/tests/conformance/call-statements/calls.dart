@@ -40,6 +40,11 @@ void exercise(Pointer<u64> output) {
   make(u64(1));
   echo(box);
   scalar();
+  makeTop(u64(12));
+  takeTop<Box>(box);
+  weakTop(box);
+  nothing();
+  recordEffect();
   output.value = output.value + box.value;
 }
 
@@ -60,3 +65,12 @@ Null nothing() { return null; }
 Null empty() {}
 @bare
 Null Function() getNothing() => nothing;
+
+@bare
+Box makeTop(u64 value) => Box(value);
+@bare
+T takeTop<T>(@owned T value) => value;
+@bare
+Weak<Box> weakTop(Box value) => Weak<Box>.fromStrong(value);
+@extern
+external u64 recordEffect();
