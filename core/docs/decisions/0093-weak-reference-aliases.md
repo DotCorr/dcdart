@@ -27,3 +27,7 @@ Outstanding: owned weak function-pointer parameters are still rejected, weak
 field mutation and mutable weak bindings need separate handling, and null-assert
 expressions remain unsupported (discovered in this regression; an explicit null
 check is used). General thread-safe reference counting is a separate requirement.
+
+Follow-up: ADR-0094 enables inferred owned weak function pointers and adds a
+negative ownership-convention test. Explicit owned callback annotations remain
+part of GAP-0057.

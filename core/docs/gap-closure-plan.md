@@ -161,3 +161,7 @@ publication gate, and later changes require newer evidence.
 - Weak aliases (ADR-0093 / GAP-0017): alias/return/direct-call ownership now
   implemented with RetainWeak and runtime regression. Owned weak callbacks,
   weak mutation and null-assert expressions remain open; platform checks pending.
+
+- Owned weak callbacks (ADR-0094): inferred consuming weak function pointers
+  now work with RetainWeak and exact convention checks. Explicit owned callback
+  annotations remain GAP-0057; weak mutation remains open.

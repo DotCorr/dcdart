@@ -363,9 +363,10 @@ final class DCFuncPtr extends DCType {
 
   /// Per-parameter ownership, in the shape `Call.argOwnership` uses, so a
   /// consumer (dc-elide) can treat a direct and an indirect call through one
-  /// code path.
+  /// code path. Weak ownership remains in params; strong-count elision must
+  /// not interpret it as a consumed strong reference.
   List<bool> get paramOwnership =>
-      params.map((p) => p.owned).toList(growable: false);
+      params.map((p) => p.owned && p.type is DCHeapPointer).toList(growable: false);
 
   @override
   bool operator ==(Object other) {

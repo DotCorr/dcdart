@@ -4246,25 +4246,10 @@ class _BareFunctionLowerer {
     for (final p in node.positionalParameters) {
       final type = _lowerType(p.type, context: '$what param ${p.name}');
       final isOwned = _hasMarkerAnnotation(p.annotations, '_Owned', preludeUri);
-      if (type is DCWeakPointer && isOwned) {
-        // (ADR-0023) A direct call to such a function is already restricted to
-        // a FRESH `Weak<T>` argument, a check that needs the argument
-        // EXPRESSION. Through a pointer there is no callee declaration at the
-        // call site to re-derive that restriction from, and `DCFuncParam.owned`
-        // deliberately mirrors `Call.argOwnership`, which does not track weak
-        // ownership at all. Refused at the tear-off, where the signature can
-        // still be named, rather than lowered into something that silently
-        // skips the check.
-        throw DccLowerError(
-          '"$context": $what takes an `@owned Weak<T>` parameter, which cannot '
-          'be reached through a function pointer — weak-count ownership has no '
-          'representation in `DCFuncPtr` (docs/known-gaps.md GAP-0057)',
-        );
-      }
-      // `owned` mirrors `Call.argOwnership` EXACTLY: true only for a
-      // DCHeapPointer parameter annotated `@owned`. `@owned` on a scalar is
-      // ignored in both places -- there is no ARC traffic to elide.
-      params.add(DCFuncParam(type, owned: type is DCHeapPointer && isOwned));
+      // Ownership belongs to the callback type for both managed kinds.
+      // Strong-count elision reads its own filtered view of this signature.
+      params.add(DCFuncParam(type,
+          owned: (type is DCHeapPointer || type is DCWeakPointer) && isOwned));
     }
     final returnType = node.returnType;
     return DCFuncPtr(
@@ -4388,7 +4373,11 @@ class _BareFunctionLowerer {
       // third possibility and no conservative fallback -- if this were
       // unknown, the retain could be neither emitted nor omitted correctly.
       if (expected.owned && !_isFreshHeapOwnership(callArgs[i])) {
-        _addInstr(Retain(object: arg));
+        if (arg.type is DCWeakPointer) {
+          _addInstr(RetainWeak(object: arg));
+        } else {
+          _addInstr(Retain(object: arg));
+        }
       }
       _trackPendingOwner(callArgs[i], arg, owned: expected.owned);
       loweredArgs.add(arg);

@@ -21,6 +21,9 @@ u64 exercise() {
   final second = first;
   final third = echo(second);
   consume(third);
+  final callback = consume;
+  callback(third);
+  callback(dead());
   final gone = third.value;
   if (gone != null) return u64(0);
   final box = Box(u64(9));
@@ -29,6 +32,8 @@ u64 exercise() {
   void localConsume(@owned Weak<Box> value) {}
   final local = localEcho(live);
   localConsume(local);
+  final localCallback = localConsume;
+  localCallback(local);
   final method = box.echoWeak(local);
   box.consumeWeak(method);
   final alias = method;
