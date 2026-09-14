@@ -157,3 +157,7 @@ publication gate, and later changes require newer evidence.
 - Direct call statements (ADR-0092): discarded heap/weak/null/scalar returns
   are supported with ownership cleanup. Native regression passes locally;
   platform checks pending.
+
+- Weak aliases (ADR-0093 / GAP-0017): alias/return/direct-call ownership now
+  implemented with RetainWeak and runtime regression. Owned weak callbacks,
+  weak mutation and null-assert expressions remain open; platform checks pending.

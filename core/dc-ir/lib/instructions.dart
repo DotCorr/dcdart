@@ -1175,6 +1175,16 @@ final class MakeWeak extends DCInstruction {
   DCValue? get result => dest;
 }
 
+/// Acquires another ownership of an existing weak reference, including a
+/// reference whose target has died. Only the weak count changes; the zombie
+/// slot remains allocated until every weak owner drops it.
+final class RetainWeak extends DCInstruction {
+  final DCValue object;
+  const RetainWeak({required this.object});
+  @override
+  DCValue? get result => null;
+}
+
 /// Reads a weak reference's target — spec §3.3's "nils out when the
 /// target dies." Checks the target's `strong` header count: zero means
 /// dead, and `dest` is the null pointer, no retain performed; nonzero

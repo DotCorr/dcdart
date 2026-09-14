@@ -211,6 +211,10 @@ String emitModule(
         (i) =>
             i is Alloc ||
             i is Retain ||
+            i is RetainWeak ||
+            i is MakeWeak ||
+            i is WeakLoad ||
+            i is DropWeak ||
             i is Release ||
             i is AllocRaw ||
             i is FreeRaw,
@@ -783,6 +787,8 @@ void _emitInstruction(DCInstruction instruction, _FunctionEmitter e, {required S
       _emitRetain(instruction, e, context);
     case Release():
       _emitRelease(instruction, e, context);
+    case RetainWeak():
+      _emitWeakRetain(instruction.object, e);
     case MakeWeak():
       _emitMakeWeak(instruction, e, context);
     case WeakLoad():
@@ -2047,18 +2053,22 @@ void _emitRelease(Release instruction, _FunctionEmitter e, String context) {
 /// `dest` its own definition per DC-IR's "every value defined exactly
 /// once" rule even though its runtime value is identical).
 void _emitMakeWeak(MakeWeak instruction, _FunctionEmitter e, String context) {
+  _emitWeakRetain(instruction.object, e);
+  e.line(
+    '%v${instruction.dest.id.index} = getelementptr i8, ptr %v${instruction.object.id.index}, i64 0',
+  );
+}
+
+void _emitWeakRetain(DCValue object, _FunctionEmitter e) {
   final header = e.freshName('hdr');
   final weakPtr = e.freshName('weakptr');
   final weakVal = e.freshName('weakval');
   final newWeak = e.freshName('newweak');
-  e.line('%$header = getelementptr i8, ptr %v${instruction.object.id.index}, i64 -$_headerSizeBytes');
+  e.line('%$header = getelementptr i8, ptr %v${object.id.index}, i64 -$_headerSizeBytes');
   e.line('%$weakPtr = getelementptr i8, ptr %$header, i64 4');
   e.line('%$weakVal = load i32, ptr %$weakPtr');
   e.line('%$newWeak = add i32 %$weakVal, 1');
   e.line('store i32 %$newWeak, ptr %$weakPtr');
-  e.line(
-    '%v${instruction.dest.id.index} = getelementptr i8, ptr %v${instruction.object.id.index}, i64 0',
-  );
 }
 
 /// `WeakLoad`: checks `strong`; dead (zero) -> `dest` is the null pointer,

@@ -162,6 +162,7 @@ class _ArcCounts {
   int retain = 0;
   int release = 0;
   int makeWeak = 0;
+  int retainWeak = 0;
   int weakLoad = 0;
   int dropWeak = 0;
 
@@ -173,6 +174,8 @@ class _ArcCounts {
         retain++;
       case Release():
         release++;
+      case RetainWeak():
+        retainWeak++;
       case MakeWeak():
         makeWeak++;
       case WeakLoad():
@@ -189,10 +192,11 @@ class _ArcCounts {
     retain += other.retain;
     release += other.release;
     makeWeak += other.makeWeak;
+    retainWeak += other.retainWeak;
     weakLoad += other.weakLoad;
     dropWeak += other.dropWeak;
   }
 
   String format() =>
-      'alloc=$alloc retain=$retain release=$release makeweak=$makeWeak weakload=$weakLoad dropweak=$dropWeak';
+      'alloc=$alloc retain=$retain release=$release makeweak=$makeWeak weakload=$weakLoad dropweak=$dropWeak retainweak=$retainWeak';
 }

@@ -1348,22 +1348,8 @@ class _BareFunctionLowerer {
         _heapLocals.add(stmt);
       }
       if (value.type is DCWeakPointer) {
-        // (ADR-0023) Only fresh-ownership sources are handled: a direct
-        // `Weak.fromStrong(...)` construction (MakeWeak already
-        // incremented the weak count) or a call returning `Weak<T>`
-        // (ownership transferred out, same convention as ADR-0019).
-        // Aliasing an existing Weak<T> local (`final w2 = w1;`) would need
-        // its own weak-count increment that nothing here performs yet --
-        // rather than silently under-count and double-DropWeak (the exact
-        // bug class ADR-0017 fixed for heap locals), this throws a clear
-        // error instead of miscompiling.
         if (!_isFreshHeapOwnership(init)) {
-          throw DccLowerError(
-            '"$context": local "${stmt.name}" is Weak-typed but its '
-            'initializer is not a fresh Weak.fromStrong(...) construction '
-            'or a call returning Weak<T> ($init, ${init.runtimeType}) -- '
-            'aliasing an existing Weak<T> local is not supported yet',
-          );
+          _addInstr(RetainWeak(object: value));
         }
         _weakLocals.add(stmt);
       }
@@ -2338,9 +2324,7 @@ class _BareFunctionLowerer {
     }
     if (value.type is DCWeakPointer &&
         !_isFreshHeapOwnership(expr) && !_weakLocals.contains(exceptDecl)) {
-      throw DccLowerError('"$context": returning a borrowed Weak reference '
-          'requires weak-to-weak retain, which is not implemented; return '
-          'a fresh Weak.fromStrong reference or an owned local');
+      _addInstr(RetainWeak(object: value));
     }
     _releaseHeapLocals(exceptDecl: exceptDecl);
     _releaseWeakLocals(exceptDecl: exceptDecl);
@@ -2565,7 +2549,7 @@ class _BareFunctionLowerer {
       if (owned && !_isFreshHeapOwnership(sources[i])) {
         if (arg.type is DCHeapPointer) _addInstr(Retain(object: arg));
         if (arg.type is DCWeakPointer) {
-          throw DccLowerError('"$context": an @owned Weak argument must be fresh');
+          _addInstr(RetainWeak(object: arg));
         }
       }
       _trackPendingOwner(sources[i], arg, owned: owned);
@@ -3985,21 +3969,9 @@ class _BareFunctionLowerer {
       if (expectedType is DCHeapPointer && isOwnedParam && !_isFreshHeapOwnership(callArgs[i])) {
         _addInstr(Retain(object: arg));
       }
-      // (ADR-0023) Same idea for a Weak<T>-typed @owned parameter, but
-      // narrower: passing an EXISTING Weak<T> local would need its own
-      // weak-count increment (a "weak retain") this project doesn't
-      // implement yet (MakeWeak only accepts a DCHeapPointer source, not
-      // an existing DCWeakPointer -- see the prelude's Weak<T> doc
-      // comment on why weak-to-weak aliasing is unsupported). Only a
-      // fresh source is allowed through; anything else throws rather than
-      // silently double-dropping the weak count.
+      // A borrowed weak argument needs its own weak-count ownership.
       if (expectedType is DCWeakPointer && isOwnedParam && !_isFreshHeapOwnership(callArgs[i])) {
-        throw DccLowerError(
-          '"$context": call to "${target.name.text}" passes an existing '
-          'Weak<T> local to an @owned Weak<T> parameter -- only a fresh '
-          'Weak.fromStrong(...) construction or a call returning Weak<T> '
-          'can be passed directly (see docs/known-gaps.md)',
-        );
+        _addInstr(RetainWeak(object: arg));
       }
       // Only DCHeapPointer arguments record ownership for elision purposes
       // -- a DCWeakPointer @owned param has no elision story built yet
@@ -4210,12 +4182,7 @@ class _BareFunctionLowerer {
         _addInstr(Retain(object: arg));
       }
       if (expectedType is DCWeakPointer && isOwnedParam && !_isFreshHeapOwnership(callArgs[i])) {
-        throw DccLowerError(
-          '"$context": call to local function "${callee.linkName}" passes an '
-          'existing Weak<T> local to an @owned Weak<T> parameter -- only a '
-          'fresh Weak.fromStrong(...) construction or a call returning '
-          'Weak<T> can be passed directly (same restriction as ADR-0023)',
-        );
+        _addInstr(RetainWeak(object: arg));
       }
       argOwnership.add(expectedType is DCHeapPointer && isOwnedParam);
       _trackPendingOwner(callArgs[i], arg, owned: isOwnedParam);

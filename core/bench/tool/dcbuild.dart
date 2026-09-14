@@ -161,7 +161,7 @@ Future<int> main(List<String> argv) async {
         'dcbuild: ATOMIC REWRITE MISMATCH — expected ${arcSites.contiguous} '
         'refcount update site(s) from the DC-IR (retain=${arcSites.retain}, '
         'release=${arcSites.release}, makeWeak=${arcSites.makeWeak}, '
-        'dropWeak=${arcSites.dropWeak}) but rewrote $rewritten in the emitted '
+        'dropWeak=${arcSites.dropWeak}, retainWeak=${arcSites.retainWeak}) but rewrote $rewritten in the emitted '
         'LLVM IR.\n'
         'This means backend/lib/llvm_emit.dart no longer emits refcount '
         'updates in the load/add-1/store shape this rewriter matches. The '
@@ -216,6 +216,7 @@ class _ArcSites {
   final int retain;
   final int release;
   final int makeWeak;
+  final int retainWeak;
   final int dropWeak;
 
   /// `WeakLoad` also increments `strong`, but llvm_emit emits that increment
@@ -227,25 +228,26 @@ class _ArcSites {
   final int weakLoad;
 
   const _ArcSites(
-      this.retain, this.release, this.makeWeak, this.dropWeak, this.weakLoad);
+      this.retain, this.release, this.makeWeak, this.dropWeak, this.weakLoad, this.retainWeak);
 
-  int get contiguous => retain + release + makeWeak + dropWeak;
+  int get contiguous => retain + release + makeWeak + dropWeak + retainWeak;
 }
 
 _ArcSites _countArcUpdateSites(DCModule module) {
-  var retain = 0, release = 0, makeWeak = 0, dropWeak = 0, weakLoad = 0;
+  var retain = 0, release = 0, makeWeak = 0, dropWeak = 0, weakLoad = 0, retainWeak = 0;
   for (final f in module.functions) {
     for (final b in f.blocks) {
       for (final i in b.body) {
         if (i is Retain) retain++;
         if (i is Release) release++;
+        if (i is RetainWeak) retainWeak++;
         if (i is MakeWeak) makeWeak++;
         if (i is DropWeak) dropWeak++;
         if (i is WeakLoad) weakLoad++;
       }
     }
   }
-  return _ArcSites(retain, release, makeWeak, dropWeak, weakLoad);
+  return _ArcSites(retain, release, makeWeak, dropWeak, weakLoad, retainWeak);
 }
 
 class _RewriteResult {

@@ -320,7 +320,7 @@ Set<String> computeRefcountTransparentCallees(List<DCFunction> functions) {
     var bad = false;
     for (final block in f.blocks) {
       for (final instruction in block.body) {
-        if (instruction is MakeWeak ||
+        if (instruction is RetainWeak || instruction is MakeWeak ||
             instruction is WeakLoad ||
             instruction is DropWeak ||
             instruction is IndirectCall) {
@@ -715,7 +715,7 @@ bool _isOpaqueForPendingRetain(
         instruction.argOwnership.contains(true);
   }
   return instruction is IndirectCall ||
-      instruction is MakeWeak ||
+      instruction is RetainWeak || instruction is MakeWeak ||
       instruction is WeakLoad ||
       instruction is DropWeak ||
       instruction is Release;
@@ -1468,6 +1468,7 @@ DCBasicBlock _elideBlock(
         );
         stats?.opaqueLimited += invalidatedIndirect;
         kept.add(instruction);
+      case RetainWeak():
       case MakeWeak():
       case WeakLoad():
       case DropWeak():
@@ -1654,6 +1655,7 @@ Set<int> referencedValueIds(DCInstruction instruction) {
       args.forEach(ref);
     case Retain(:final object):
     case Release(:final object):
+    case RetainWeak(:final object):
     case DropWeak(:final object):
       ref(object);
     case MakeWeak(:final object):

@@ -1664,6 +1664,11 @@ should prevent it.
 
 ## GAP-0017 — M2's naive Retain/Release insertion + weak references + first elision pass (RESOLVED); passes 1/2/4/5 + unowned/cycles/heap-in-loop remain
 
+**Development progress (ADR-0093):** weak aliases, borrowed weak returns and
+owned weak arguments in direct/local/instance calls are implemented and tested
+locally. Owned weak callbacks, weak mutation and other broader requirements
+remain open; this does not close the complete entry.
+
 **Domain:** dcc-lower, backend (M2, M3+)
 **Status:** items 1, 2 (pass 3 only), 3 (weak only), 5, AND item 6 (`while` loops, now INCLUDING
 heap/weak locals in the body) RESOLVED (2026-08-14/15/16/26,
