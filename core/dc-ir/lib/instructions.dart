@@ -682,7 +682,11 @@ final class PtrOffset extends DCInstruction {
   final DCValue dest;
   final DCValue base;
   final int offsetBytes;
-  const PtrOffset({required this.dest, required this.base, required this.offsetBytes});
+  /// Generated destruction may read fields after strong reaches zero.
+  /// Allocation-state validation still applies; ordinary access requires life.
+  final bool allowDeadManagedBase;
+  const PtrOffset({required this.dest, required this.base, required this.offsetBytes,
+      this.allowDeadManagedBase = false});
 
   @override
   DCValue? get result => dest;

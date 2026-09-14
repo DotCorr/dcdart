@@ -3,7 +3,9 @@
 extern uint64_t dc_heap_live;
 extern unsigned char dc_heap[];
 int main(int argc, char **argv) { if(argc>1) {
-  if(argv[1][0]=='d') dropWeak((void*)(uintptr_t)1);
+  if(argv[1][0]=='k') { void *p=make(); makeWeak(p); destroy(p); foreignWrite(p); }
+  else if(argv[1][0]=='j') { void *p=make(); makeWeak(p); destroy(p); foreignRead(p); }
+  else if(argv[1][0]=='d') dropWeak((void*)(uintptr_t)1);
   else if(argv[1][0]=='g') copyWeak((void*)(uintptr_t)1);
   else if(argv[1][0]=='h') makeWeak((void*)(uintptr_t)1);
   else if(argv[1][0]=='o') { void *p=make(); ((uint32_t*)p)[-4]=UINT32_MAX; copy(p); }

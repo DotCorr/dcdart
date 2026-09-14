@@ -452,7 +452,8 @@ DCFunction _buildDestructor(String linkName, List<_StructField> fields) {
   for (final field in fields) {
     if (field.type is! DCHeapPointer && field.type is! DCWeakPointer) continue;
     final fieldPtr = DCValue(allocId(), DCPointer(field.type));
-    instructions.add(PtrOffset(dest: fieldPtr, base: selfValue, offsetBytes: field.offset));
+    instructions.add(PtrOffset(dest: fieldPtr, base: selfValue, offsetBytes: field.offset,
+        allowDeadManagedBase: true));
     final fieldValue = DCValue(allocId(), field.type);
     instructions.add(Load(dest: fieldValue, pointer: fieldPtr));
     instructions.add(field.type is DCWeakPointer

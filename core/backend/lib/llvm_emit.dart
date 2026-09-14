@@ -651,6 +651,9 @@ void _emitInstruction(DCInstruction instruction, _FunctionEmitter e, {required S
     case PtrOffset():
       if (instruction.base.type is DCHeapPointer) {
         _emitManagedAddressGuard(instruction.base, e);
+        if (!instruction.allowDeadManagedBase) {
+          _emitCountGuard(instruction.base, 0, e);
+        }
       }
       e.line(
         '%v${instruction.dest.id.index} = getelementptr i8, ptr '

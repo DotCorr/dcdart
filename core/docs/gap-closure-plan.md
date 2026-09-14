@@ -205,3 +205,7 @@ publication gate, and later changes require newer evidence.
 - Reference header validation (ADR-0104 / GAP-0038): allocation-state and
   count checks precede ARC header access; underflow/resurrection and increment
   overflow paths trap. Type/reuse/field-liveness/raw-allocation checks remain open.
+
+- Managed field liveness (ADR-0105 / GAP-0038): zombie field reads/writes
+  trap; generated destruction has an explicit checked cleanup path. Type and
+  address-reuse checks remain open; platform validation pending.
