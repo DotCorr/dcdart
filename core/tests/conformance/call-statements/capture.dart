@@ -1,9 +1,9 @@
 import '../../../runtime/dc-core-bare/prelude.dart';
 @bare
-u64 invalid(u64 outer) {
-  u64 captures(u64 value) {
-    if (value == outer) return u64(1);
-    return u64(0);
+bool invalid(u64 outer) {
+  bool captures(u64 value) {
+    final bool captured = value == outer;
+    return captured;
   }
   return captures(u64(1));
 }

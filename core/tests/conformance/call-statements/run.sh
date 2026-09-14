@@ -6,6 +6,7 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 dart "$CORE/dcc/bin/dcc.dart" build --mode bare --target host "$HERE/calls.dart" -o "$TMP/calls.o" --emit-header "$TMP/calls.h"
 clang -I"$TMP" "$HERE/main.c" "$TMP/calls.o" -o "$TMP/test"
+clang -x c++ -std=c++17 -fsyntax-only -I"$TMP" "$HERE/main.c"
 "$TMP/test"
 if dart "$CORE/dcc/bin/dcc.dart" build --mode bare --target host "$HERE/capture.dart" -o "$TMP/invalid.o" > "$TMP/rejection" 2>&1; then
   echo 'capture unexpectedly accepted' >&2

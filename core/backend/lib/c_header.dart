@@ -188,19 +188,7 @@ String cTypeOf(DCType type, {required String context}) {
     case DCVoid():
       return 'void';
     case DCBool():
-      // DCBool is LLVM `i1`. C's `_Bool` is a full byte, and an i1 in a
-      // signature is ABI-ambiguous (the high 7 bits are undefined), so
-      // spelling this `bool` would produce a header that compiles, links,
-      // and is silently wrong at the boundary — the exact failure this
-      // emitter exists to prevent. No DCDart function signature can carry a
-      // bool today (comparisons only ever feed CondBranch), so this is
-      // unreachable rather than a limitation; if it ever becomes reachable,
-      // the fix is to widen the ABI type deliberately, not to guess here.
-      throw CHeaderError(
-        '"$context": a DCDart bool cannot cross the C ABI. It lowers to '
-        'LLVM i1, whose padding in a C `_Bool` is undefined. Return a '
-        'u8 (0/1) instead.',
-      );
+      return 'bool';
     case DCInt(width: final width, signed: final signed):
       switch (width) {
         case IntWidth.w8:

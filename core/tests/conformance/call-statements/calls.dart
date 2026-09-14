@@ -5,6 +5,8 @@ class Box extends HeapObject {
 }
 @bare
 void exercise(Pointer<u64> output) {
+  bool equal(u64 left, u64 right) => left == right;
+  bool invert(bool value) { final bool copy = value; return !copy; }
   void write(Pointer<u64> out, u64 value) { out.value = value; }
   void consume(@owned Box value) {}
   void borrow(Box value) {}
@@ -18,6 +20,10 @@ void exercise(Pointer<u64> output) {
   }
   final void Function(Pointer<u64>) expression = (Pointer<u64> out) { out.value = out.value + u64(2); };
   final box = Box(u64(9));
+  if (!equal(u64(4), u64(4)) || !invert(false)) {
+    output.value = u64(0);
+    return;
+  }
   write(output, u64(40));
   recursive(output, u64(3));
   expression(output);
@@ -29,3 +35,14 @@ void exercise(Pointer<u64> output) {
   scalar();
   output.value = output.value + box.value;
 }
+
+@bare
+bool negate(bool input) => !input;
+@bare
+bool invoke(bool Function(bool) callback, bool input) => callback(input);
+@bare
+bool Function(bool) getNegate() => negate;
+@bare
+void storeBool(Pointer<bool> output, bool input) { output.value = input; }
+@bare
+bool loadBool(Pointer<bool> input) => input.value;

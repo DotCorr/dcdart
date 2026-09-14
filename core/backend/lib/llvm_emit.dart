@@ -342,7 +342,8 @@ bool _winIndirectAggregate(DCType type, bool windowsAbi) {
   return true;
 }
 
-String _integerExtension(DCType type, bool narrowAbi) {
+String _integerExtension(DCType type, bool narrowAbi, bool windowsAbi) {
+  if (type is DCBool && (narrowAbi || windowsAbi)) return 'zeroext ';
   if (narrowAbi && type is DCInt &&
       (type.width == IntWidth.w8 || type.width == IntWidth.w16)) {
     return type.signed ? 'signext ' : 'zeroext ';
@@ -356,9 +357,9 @@ String _emitExternDeclaration(DCExternFunction extern, bool windowsAbi, bool nar
   final params = <String>[
     if (indirect) 'ptr sret($retType)',
     for (final t in extern.paramTypes)
-      _winIndirectAggregate(t, windowsAbi) ? 'ptr' : '${_llvmType(t, context: extern.linkName)} ${_integerExtension(t, narrowAbi)}'.trim(),
+      _winIndirectAggregate(t, windowsAbi) ? 'ptr' : '${_llvmType(t, context: extern.linkName)} ${_integerExtension(t, narrowAbi, windowsAbi)}'.trim(),
   ].join(', ');
-  return 'declare ${indirect ? 'void' : '${_integerExtension(extern.returnType, narrowAbi)}$retType'} @${extern.linkName}($params)';
+  return 'declare ${indirect ? 'void' : '${_integerExtension(extern.returnType, narrowAbi, windowsAbi)}$retType'} @${extern.linkName}($params)';
 }
 
 /// LLVM label for a DC-IR block. Block 0 keeps the "entry" label M0/M1's
@@ -435,7 +436,7 @@ String _emitFunction(
     for (final v in entryBlock.params)
       _winIndirectAggregate(v.type, windowsAbi)
           ? 'ptr %arg${v.id.index}'
-          : '${_llvmType(v.type, context: function.linkName)} ${_integerExtension(v.type, narrowAbi)}%v${v.id.index}',
+          : '${_llvmType(v.type, context: function.linkName)} ${_integerExtension(v.type, narrowAbi, windowsAbi)}%v${v.id.index}',
   ].join(', ');
 
   final emitter = _FunctionEmitter(function.linkName, declaredIntrinsics, heapRegionBytes,
@@ -490,7 +491,7 @@ String _emitFunction(
   // against a plain C caller needs (m0-target.md §1's "no `dso_local`" and
   // "no `ccc` keyword needed" notes).
   emitter.prependToLabel(_labelFor(entryBlock.id), emitter.entryAllocas);
-  buffer.writeln('define ${indirectReturn ? 'void' : '${_integerExtension(function.returnType, narrowAbi)}$retType'} @${function.linkName}($params) #0 {');
+  buffer.writeln('define ${indirectReturn ? 'void' : '${_integerExtension(function.returnType, narrowAbi, windowsAbi)}$retType'} @${function.linkName}($params) #0 {');
   buffer.write(emitter.render());
   buffer.writeln('}');
   return buffer.toString();
@@ -1285,7 +1286,7 @@ String _argListText(List<DCValue> args, String context, _FunctionEmitter e) {
       e.line('store $type %v${a.id.index}, ptr %$slot, align 16');
       return 'ptr %$slot';
     }
-    return '$type ${_integerExtension(a.type, e.narrowAbi)}%v${a.id.index}';
+    return '$type ${_integerExtension(a.type, e.narrowAbi, e.windowsAbi)}%v${a.id.index}';
   }).join(', ');
 }
 
@@ -1316,7 +1317,7 @@ void _emitCallText(
     e.line('call void $callee($args)');
     e.line('%v${dest.id.index} = load $retTypeText, ptr %$slot, align 16');
   } else {
-    e.line('%v${dest.id.index} = call ${_integerExtension(dest.type, e.narrowAbi)}$retTypeText $callee($argsText)');
+    e.line('%v${dest.id.index} = call ${_integerExtension(dest.type, e.narrowAbi, e.windowsAbi)}$retTypeText $callee($argsText)');
   }
 }
 

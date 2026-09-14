@@ -21,7 +21,8 @@ regressions protect symbol hoisting and ARC conventions.
 
 Remaining limitations discovered during this work: an unannotated effect-only
 function expression can infer NullType, which is not supported as a return type;
-boolean local-function return declarations can encounter an unbound dart:core
-bool reference. These remain follow-up work, along with capturing environments.
+boolean local-function declarations also encountered an unbound dart:core bool
+reference, addressed subsequently in ADR-0090. Inferred Null returns and capturing
+environments remain follow-up work.
 The test uses an explicit void function type for the anonymous function. This
 change does not claim general closure support.

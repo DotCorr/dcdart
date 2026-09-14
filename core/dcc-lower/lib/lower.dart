@@ -5032,6 +5032,11 @@ DCType _lowerSignatureType(
   required _HeapLayouts heapLayouts,
   required String context,
 }) {
+  if (type is InterfaceType &&
+      type.classReference.canonicalName?.name == 'bool' &&
+      type.classReference.canonicalName?.parent?.name == 'dart:core') {
+    return const DCBool();
+  }
   if (true) {
     if (type is ExtensionType) {
       final decl = type.extensionTypeDeclaration;
@@ -5645,6 +5650,16 @@ final class _ClosureScan extends RecursiveVisitor {
   final Set<VariableDeclaration> valueUses = {};
   final Set<VariableDeclaration> callUses = {};
   bool usesThis = false;
+
+  @override
+  void visitInterfaceType(InterfaceType node) {
+    // Core declarations may be absent from a trimmed Kernel component.
+    // Types cannot capture local values; traverse arguments without resolving
+    // the class reference merely to visit a declaration we do not need.
+    for (final argument in node.typeArguments) {
+      argument.accept(this);
+    }
+  }
 
   @override
   void visitEqualsCall(EqualsCall node) {
