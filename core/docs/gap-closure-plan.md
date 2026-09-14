@@ -165,3 +165,7 @@ publication gate, and later changes require newer evidence.
 - Owned weak callbacks (ADR-0094): inferred consuming weak function pointers
   now work with RetainWeak and exact convention checks. Explicit owned callback
   annotations remain GAP-0057; weak mutation remains open.
+
+- Weak managed fields (ADR-0095 / GAP-0020): layout, construction, replacement,
+  temporary-owner loads and destructor cleanup implemented with regressions.
+  Mutable weak locals remain open; platform checks pending.

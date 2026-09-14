@@ -1534,6 +1534,11 @@ macOS/arm64, after which all sixteen conformance harnesses pass in a `linux/amd6
 
 ## GAP-0020 — Heap- and weak-typed heap-object field stores rejected (undecided ownership policy)
 
+**Development progress (ADR-0095):** managed weak fields now support layout,
+constructor ownership, temporary-owner loads, replacement and destructor drops.
+The live/dead/self-assignment regression passes locally; platform verification
+and release publication remain outstanding.
+
 **Domain:** dcc-lower (M2)
 **Status:** OPEN — scalar (`DCInt`) heap-object field stores RESOLVED
 (`docs/decisions/0032-if-else-merge-and-heap-field-store.md`); heap/weak-typed field stores throw a

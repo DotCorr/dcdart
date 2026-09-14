@@ -41,3 +41,43 @@ u64 exercise() {
   if (value == null) return u64(0);
   return value.n;
 }
+
+class Twin extends HeapObject {
+  final Weak<Box> first;
+  final Weak<Box> second;
+  Twin(Weak<Box> input): first = input, second = input;
+}
+class GenericHolder<T> extends HeapObject {
+  T value;
+  GenericHolder(this.value);
+}
+class Holder extends HeapObject {
+  Weak<Box> ref;
+  Holder(this.ref);
+}
+@bare
+u64 fields() {
+  final holder = Holder(dead());
+  holder.ref = holder.ref;
+  final gone = holder.ref.value;
+  if (gone != null) return u64(0);
+  final box = Box(u64(21));
+  holder.ref = Weak<Box>.fromStrong(box);
+  final alias = holder.ref;
+  holder.ref = dead();
+  final live = alias.value;
+  if (live == null) return u64(0);
+  final extracted = Holder(dead()).ref;
+  final deadValue = extracted.value;
+  if (deadValue != null) return u64(0);
+  final twin = Twin(dead());
+  final twinAlias = twin.second;
+  final twinValue = twinAlias.value;
+  if (twinValue != null) return u64(0);
+  final generic = GenericHolder<Weak<Box>>(dead());
+  generic.value = alias;
+  final genericValue = generic.value.value;
+  if (genericValue == null) return u64(0);
+  Holder(dead()).ref = alias;
+  return genericValue.n;
+}

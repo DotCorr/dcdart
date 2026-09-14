@@ -450,12 +450,13 @@ DCFunction _buildDestructor(String linkName, List<_StructField> fields) {
   final selfValue = DCValue(allocId(), const DCHeapPointer(DCVoid()));
   final instructions = <DCInstruction>[];
   for (final field in fields) {
-    if (field.heapFieldInstance == null) continue; // scalar field -- nothing to release
+    if (field.type is! DCHeapPointer && field.type is! DCWeakPointer) continue;
     final fieldPtr = DCValue(allocId(), DCPointer(field.type));
     instructions.add(PtrOffset(dest: fieldPtr, base: selfValue, offsetBytes: field.offset));
     final fieldValue = DCValue(allocId(), field.type);
     instructions.add(Load(dest: fieldValue, pointer: fieldPtr));
-    instructions.add(Release(object: fieldValue));
+    instructions.add(field.type is DCWeakPointer
+        ? DropWeak(object: fieldValue) : Release(object: fieldValue));
   }
   instructions.add(const Return());
 
@@ -858,7 +859,7 @@ class _HeapLayouts {
     final key = inst.mangledName;
     if (_destructorCache.containsKey(key)) return _destructorCache[key];
     final fields = layoutFor(inst);
-    final hasHeapField = fields.any((f) => f.heapFieldInstance != null);
+    final hasHeapField = fields.any((f) => f.type is DCHeapPointer || f.type is DCWeakPointer);
     final name = hasHeapField ? '${key}_dtor' : null;
     _destructorCache[key] = name;
     return name;
@@ -912,6 +913,9 @@ DCType _lowerFieldType(
     // (the source file being compiled), never an unbound platform
     // reference.
     final cls = type.classNode;
+    if (cls.name == 'Weak' && cls.enclosingLibrary.importUri == preludeUri) {
+      return const DCWeakPointer(DCVoid());
+    }
     if (heapLayouts.extendsHeapObject(cls)) {
       return const DCHeapPointer(DCVoid());
     }
@@ -942,7 +946,7 @@ int _byteWidth(DCType type, String className, String fieldName) {
   // level, same width as every pointer this target uses (m0-target.md §1:
   // x86_64, 8-byte pointers) -- matches DCPointer's own implicit width
   // (opaque `ptr` in the backend, core/backend/lib/llvm_emit.dart).
-  if (type is DCHeapPointer) return 8;
+  if (type is DCHeapPointer || type is DCWeakPointer) return 8;
   throw DccLowerError('"$className.$fieldName": cannot compute byte width of $type');
 }
 
@@ -4656,6 +4660,8 @@ class _BareFunctionLowerer {
       // own reference.
       if (field.type is DCHeapPointer) {
         _addInstr(Retain(object: value));
+      } else if (field.type is DCWeakPointer) {
+        _addInstr(RetainWeak(object: value));
       }
 
       final fieldPtr = DCValue(_allocId(), DCPointer(field.type));
@@ -4685,32 +4691,17 @@ class _BareFunctionLowerer {
     if (_isFreshHeapOwnership(expr.receiver)) {
       // A returned child must outlive destruction of its temporary parent.
       if (dest.type is DCHeapPointer) _addInstr(Retain(object: dest));
+      if (dest.type is DCWeakPointer) _addInstr(RetainWeak(object: dest));
       _releaseTemporary(expr.receiver, objectPtr);
     }
     return dest;
   }
 
-  /// `heapInstance.field = value` -> `PtrOffset` + `Store` (ADR-0032),
-  /// mirroring `_lowerHeapFieldLoad`'s addressing exactly, just in the
-  /// Store direction -- a real gap `_lowerHeapFieldLoad` existed but this
-  /// never did, only found by writing an actual program (`sumCollatzSteps`
-  /// mutating an accumulator field in a loop, `core/examples/demo-collatz`).
-  /// Scalar (`DCInt`) fields only: a heap- or weak-typed field STORE
-  /// raises the exact same real ownership question ADR-0027 already
-  /// flagged for local reassignment (does overwriting release the old
-  /// value? retain the new one?) -- undecided, so it throws a clear error
-  /// rather than guessing at a policy nobody has designed yet.
+  /// Store a scalar or managed field. Managed stores acquire the new
+  /// ownership before replacing and dropping the old field, including
+  /// weak self-assignment and references to dead zombie slots.
   void _lowerHeapFieldStore(InstanceSet expr, _ClassInstance inst) {
     final field = _findHeapField(inst, expr.interfaceTarget.name.text);
-    if (field.type is DCWeakPointer) {
-      throw DccLowerError(
-        '"$context": storing to the weak field '
-        '"${inst.mangledName}.${field.name}" is not supported. The strong-field '
-        'policy (ADR-0048) does not transfer: a weak store must adjust the '
-        'WEAK count and interacts with the zombie-slot semantics of ADR-0023, '
-        'which is a separate decision nobody has made.',
-      );
-    }
     final pendingDepth = _pendingOwners.length;
     final objectPtr = _lowerExpression(expr.receiver);
     _trackPendingOwner(expr.receiver, objectPtr);
@@ -4740,14 +4731,16 @@ class _BareFunctionLowerer {
     // fresh-ownership source (`a.next = Node(...)`), because `Alloc` already
     // produced the +1 this store is taking over -- the same rule ADR-0021
     // applies to an `@owned` parameter, reusing the same predicate.
-    if (field.type is DCHeapPointer) {
+    if (field.type is DCHeapPointer || field.type is DCWeakPointer) {
       if (!_isFreshHeapOwnership(expr.value)) {
-        _addInstr(Retain(object: value));
+        _addInstr(field.type is DCWeakPointer
+            ? RetainWeak(object: value) : Retain(object: value));
       }
       final oldValue = DCValue(_allocId(), field.type);
       _addInstr(Load(dest: oldValue, pointer: fieldPtr));
       _addInstr(Store(pointer: fieldPtr, value: value));
-      _addInstr(Release(object: oldValue));
+      _addInstr(field.type is DCWeakPointer
+          ? DropWeak(object: oldValue) : Release(object: oldValue));
       _releaseTemporary(expr.receiver, objectPtr);
       return;
     }
