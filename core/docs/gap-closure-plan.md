@@ -189,3 +189,7 @@ publication gate, and later changes require newer evidence.
 - Conditional values (ADR-0100): lazy branch selection and fresh/borrowed
   managed ownership implemented with nested/null/temporary regressions.
   Void-valued conditional statements remain open; platform checks pending.
+
+- Conditional actions (ADR-0101): void/value statement arms, discarded
+  temporary cleanup and assignment discovery implemented with loop tests.
+  Assignment expressions used as values remain open; platform checks pending.

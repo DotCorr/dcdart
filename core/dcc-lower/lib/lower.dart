@@ -1378,6 +1378,11 @@ class _BareFunctionLowerer {
 
     if (stmt is ExpressionStatement) {
       final expr = stmt.expression;
+      if (expr is ConditionalExpression) {
+        _lowerIf(IfStatement(expr.condition, ExpressionStatement(expr.then),
+            ExpressionStatement(expr.otherwise)));
+        return;
+      }
       if (expr is InstanceSet) {
         final target = expr.interfaceTarget;
         final enclosingClass = target.enclosingClass;
@@ -1635,14 +1640,9 @@ class _BareFunctionLowerer {
         if (result != null) _releaseTemporary(expr, result);
         return;
       }
-      throw DccLowerError(
-        '"$context": unsupported expression statement $expr '
-        '(${expr.runtimeType}) — M1 only understands `pointer.value = x;`, '
-        '`structInstance.field = x;`, `heapInstance.field = x;` (scalar '
-        'fields only), scalar local reassignment (`x = <expr>;`), '
-        '`Port.outb(port, value);`, and a call to a `@bare` or `@extern` '
-        'function as a statement',
-      );
+      final result = _lowerExpression(expr);
+      _releaseTemporary(expr, result);
+      return;
     }
 
     if (stmt is ReturnStatement) {
@@ -2233,6 +2233,14 @@ class _BareFunctionLowerer {
   /// rather than silently scoping the analysis to the wrong loop — nested
   /// loops (and composing a loop's own header merge with an if/else merge
   /// in the same pass) are real, separate, unimplemented work.
+  void _collectStatementAssignments(Expression expr, Set<VariableDeclaration> out) {
+    if (expr is VariableSet) out.add(expr.variable);
+    if (expr is ConditionalExpression) {
+      _collectStatementAssignments(expr.then, out);
+      _collectStatementAssignments(expr.otherwise, out);
+    }
+  }
+
   void _collectLoopCarriedCandidates(Statement stmt, Set<VariableDeclaration> out) {
     // Local function bodies run in their own scope; captures are checked separately.
     if (stmt is FunctionDeclaration) return;
@@ -2242,8 +2250,8 @@ class _BareFunctionLowerer {
       }
       return;
     }
-    if (stmt is ExpressionStatement && stmt.expression is VariableSet) {
-      out.add((stmt.expression as VariableSet).variable);
+    if (stmt is ExpressionStatement) {
+      _collectStatementAssignments(stmt.expression, out);
       return;
     }
     if (stmt is IfStatement) {
@@ -2260,7 +2268,7 @@ class _BareFunctionLowerer {
       // loop-carried assignment.
       _collectLoopCarriedCandidates(stmt.body, out);
       for (final u in stmt.updates) {
-        if (u is VariableSet) out.add(u.variable);
+        _collectStatementAssignments(u, out);
       }
       return;
     }
