@@ -60,3 +60,32 @@ heap fields (ADRs 0089–0095). Exact ARC expectations include retainweak. Earli
 runs of the initial weak-alias commit failed those old text expectations; this
 checkpoint includes their correction. Mutable weak locals, null assertions and
 later receiver changes require their own newer results. All remain unreleased.
+
+## Distribution packaging and current compiler checkpoint
+
+Source: `03c502ce064d023eeb2a51ce752e132324ed77e5`.
+[Run 34887899089](https://github.com/DotCorr/dcdart/actions/runs/34887899089)
+passed all four hosts. Inspected logs show 68 conformance suites with zero
+failures/skips, 52 optimizer tests and 17 backend tests on macOS ARM64, Linux
+x86-64 and Linux ARM64. Windows passed its packaged-compiler regression subset.
+Every host verified the final archive checksum and executable hash, extracted
+into a temporary directory with spaces, and compiled/linked/executed a program
+outside the source checkout. This includes compiler changes through ADR-0105.
+
+The run used `distribution_trust=false`: it validates development packaging and
+execution, **not public signing**. Apple Developer ID/notary credentials and a
+Windows signing account are absent; positive signing/notarization validation is
+pending. The new distribution mode must succeed with those credentials before
+claiming a signed release. Browser download/OS reputation behavior and separate
+clean-machine trust assessment remain pending too.
+
+Local negative tests rejected the current macOS ad-hoc executable in required
+trust mode without emitting an archive. Its archive matched GitHub's v0.1.3 asset
+digest; `codesign` reported no TeamIdentifier and Gatekeeper rejected it. The
+published Windows ZIP also matched its GitHub digest; its PE certificate table
+was empty. Archive traversal, modified executable bytes and a modified archive
+were rejected before execution. Development provenance explicitly records
+`not-verified`, rather than treating successful execution as publisher trust.
+
+No v0.1.3 assets, Homebrew/Scoop manifests or hosted compiler were replaced.
+The credential and publication checklist is in `tools/release/SIGNING.md`.

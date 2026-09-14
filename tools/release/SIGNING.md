@@ -63,8 +63,8 @@ Windows signature validity does not guarantee SmartScreen reputation or override
 an organization's application control policy. A compiler-generated executable
 is a separate artifact: consumers must sign their own distributed applications.
 
-Linux has no equivalent universal application-signing gate. Current host binaries
-require glibc 2.39+, with Ubuntu 24.04 tested. Older glibc, musl/Alpine, macOS Intel
+Linux has no equivalent universal application-signing gate. The validated Linux
+baseline is Ubuntu 24.04 with glibc 2.39. Older glibc, musl/Alpine, macOS Intel
 and Windows ARM64 are not validated host distributions. Checksums are integrity
 checks, not independent publisher authentication or universal compatibility.
 

@@ -20,7 +20,7 @@ See [signing requirements](../tools/release/SIGNING.md).
 
 [Release build evidence](https://github.com/DotCorr/dcdart/actions/runs/34786871909) · [Package-manager evidence](https://github.com/DotCorr/dcdart/actions/runs/34787372351) · [Compiler deployment](https://github.com/DotCorr/dcdart/actions/runs/34787177237)
 
-Linux is tested on Ubuntu 24.04 and requires glibc 2.39+. Source compilation requires Dart SDK exactly 3.12.2 and Clang/LLVM; Windows linking also requires Visual Studio C++ tools. Compiler hosts are distinct from the eleven generated-code target aliases. The iOS device and Android targets retain their compile/link validation from v0.1.1; this release does not claim new device execution, macOS Intel/Windows ARM64 host archives, or a phone-hosted compiler package.
+The validated Linux baseline is Ubuntu 24.04 with glibc 2.39; older distributions are not yet verified. Source compilation requires Dart SDK exactly 3.12.2 and Clang/LLVM; Windows linking also requires Visual Studio C++ tools. Compiler hosts are distinct from the eleven generated-code target aliases. The iOS device and Android targets retain their compile/link validation from v0.1.1; this release does not claim new device execution, macOS Intel/Windows ARM64 host archives, or a phone-hosted compiler package.
 
 The full suite combines independent freestanding-object checks with native behavioral tests. On ARM hosts, the x86-64 extern image is link-verified while the same source executes through the host target. Diagnostic C harnesses may use libc; that does not allow libc dependencies in DCDart's freestanding object.
 
