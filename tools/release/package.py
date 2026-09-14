@@ -1,5 +1,5 @@
 """Build and smoke-test a host compiler from the immutable release checkout."""
-import hashlib, json, os, platform, re, shutil, subprocess, sys, tempfile
+import base64, hashlib, json, os, platform, re, shutil, subprocess, sys, tempfile
 from pathlib import Path
 root = Path(sys.argv[1]).resolve()
 out = Path(sys.argv[2]).resolve(); out.mkdir(parents=True, exist_ok=True)
@@ -18,6 +18,29 @@ os.environ['DCDART_DART'] = dart
 run([dart,'pub','get'],cwd=root/'core/dcc')
 binary = stage/'core/dcc/bin'/('dcc.exe' if windows else 'dcc')
 run([dart,'compile','exe','bin/dcc.dart','-o',binary],cwd=root/'core/dcc')
+signed = False
+if windows:
+    pfx_base64 = os.environ.get('DCDART_WINDOWS_PFX_BASE64')
+    password = os.environ.get('DCDART_WINDOWS_PFX_PASSWORD')
+    if bool(pfx_base64) != bool(password):
+        raise SystemExit('Windows signing requires both DCDART_WINDOWS_PFX_BASE64 and DCDART_WINDOWS_PFX_PASSWORD')
+    if pfx_base64:
+        signtool = shutil.which('signtool')
+        if not signtool:
+            kits = Path(os.environ.get('ProgramFiles(x86)', r'C:\Program Files (x86)'))/'Windows Kits/10/bin'
+            candidates = sorted(kits.glob('*/x64/signtool.exe'), reverse=True)
+            signtool = str(candidates[0]) if candidates else None
+        if not signtool:
+            raise SystemExit('signtool is required to sign the Windows release')
+        with tempfile.TemporaryDirectory(prefix='dcdart-sign-') as signing_dir:
+            pfx = Path(signing_dir)/'signing.pfx'
+            pfx.write_bytes(base64.b64decode(pfx_base64, validate=True))
+            run([signtool,'sign','/f',pfx,'/p',password,'/fd','SHA256',
+                 '/tr','http://timestamp.digicert.com','/td','SHA256',binary])
+            run([signtool,'verify','/pa',binary])
+        signed = True
+    elif os.environ.get('DCDART_REQUIRE_SIGNED_WINDOWS') == '1':
+        raise SystemExit('Refusing to package unsigned dcc.exe: Windows signing credentials are missing')
 shutil.copytree(root/'core/runtime/dc-core-bare',stage/'core/runtime/dc-core-bare',dirs_exist_ok=True)
 shutil.copy(root/'LICENSE',stage/'LICENSE')
 shutil.copy(root/'README.md',stage/'README.md')
@@ -40,7 +63,7 @@ for suite, source in [('temporary-ownership','temporary'), ('boolean','boolean')
         run([binary,'build','--mode','bare','--target','host',case/(source+'.dart'),'-o',obj,'--emit-header',temp/(source+'.h'),'--prelude',prelude])
         exe=temp/('test.exe' if windows else 'test')
         run(['clang','-I'+str(temp),case/'main.c',obj,'-o',exe]); run([exe])
-(stage/'provenance.json').write_text(json.dumps({'tag':tag,'commit':sha,'host':host,'dart':subprocess.check_output([dart,'--version'],text=True).strip(),'validation':'Packaged dcc compiled and linked a C host; sumTo(100) executed and returned 4950.'},indent=2)+'\n')
+(stage/'provenance.json').write_text(json.dumps({'tag':tag,'commit':sha,'host':host,'dart':subprocess.check_output([dart,'--version'],text=True).strip(),'signed':signed if windows else None,'validation':'Packaged dcc compiled and linked a C host; sumTo(100) executed and returned 4950.'},indent=2)+'\n')
 archive=Path(shutil.make_archive(str(out/name),'zip' if windows else 'gztar',root_dir=out,base_dir=name))
 (out/(archive.name+'.sha256')).write_text(hashlib.sha256(archive.read_bytes()).hexdigest()+'  '+archive.name+'\n')
 print('VERIFIED', archive)
