@@ -1614,6 +1614,17 @@ class _BareFunctionLowerer {
           return;
         }
       }
+      if (expr is InstanceInvocation) {
+        final target = expr.interfaceTarget;
+        final enclosing = target.enclosingClass;
+        if (!target.isStatic && target.kind == ProcedureKind.Method &&
+            enclosing != null && heapLayouts.extendsHeapObject(enclosing)) {
+          final result = _lowerInstanceMethodCall(expr, target, enclosing,
+              allowVoid: true);
+          if (result != null) _releaseTemporary(expr, result);
+          return;
+        }
+      }
       // (ADR-0057) A local function called for effect rather than for a value.
       // Not lowered: nothing in examples/m2-closure needs it, and this file's
       // scope rule is to extend on a real target rather than speculatively.
@@ -2532,6 +2543,93 @@ class _BareFunctionLowerer {
     return result;
   }
 
+  DCValue? _lowerInstanceMethodCall(
+    InstanceInvocation expr, Procedure target, Class enclosing,
+    {bool allowVoid = false}
+  ) {
+    // (ADR-0054) Which INSTANTIATION's method body this call goes to.
+    // Resolved BEFORE the receiver is lowered, so a failure names the
+    // call rather than surfacing later as a missing symbol.
+    final inst = _instanceOfReceiver(
+        expr.receiver, enclosing, 'the call to "${target.name.text}"');
+    final methodSubstitution = {...inst.substitution};
+    final methodParams = target.function.typeParameters;
+    final methodArgs = expr.arguments.types.map(_resolveTypeParameter).toList();
+    if (methodParams.length != methodArgs.length) {
+      throw DccLowerError('"$context": method type argument count does not match');
+    }
+    for (var i = 0; i < methodParams.length; i++) {
+      methodSubstitution[methodParams[i]] = methodArgs[i];
+    }
+    var linkName = methodLinkName(inst.mangledName, target.name.text);
+    if (methodParams.isNotEmpty) {
+      linkName = specializationLinkName(linkName, methodArgs);
+      pendingSpecializations.putIfAbsent(linkName,
+          () => _Specialization(target, methodSubstitution, inst));
+    }
+
+    final pendingDepth = _pendingOwners.length;
+    final receiver = _lowerExpression(expr.receiver);
+    _trackPendingOwner(expr.receiver, receiver);
+    final args = <DCValue>[receiver];
+    final ownership = <bool>[false];
+    final params = target.function.positionalParameters;
+    final sources = expr.arguments.positional;
+    if (params.length != sources.length || expr.arguments.named.isNotEmpty) {
+      throw DccLowerError('"$context": methods require all positional arguments');
+    }
+    for (var i = 0; i < params.length; i++) {
+      final arg = _lowerExpression(sources[i]);
+      final expected = _lowerType(
+        _substituteType(params[i].type, methodSubstitution),
+        context: '$context method argument $i',
+      );
+      if (arg.type != expected) {
+        throw DccLowerError('"$context": method argument $i has type '
+            '${arg.type}, expected $expected');
+      }
+      final owned = _hasMarkerAnnotation(params[i].annotations, '_Owned', preludeUri);
+      if (owned && !_isFreshHeapOwnership(sources[i])) {
+        if (arg.type is DCHeapPointer) _addInstr(Retain(object: arg));
+        if (arg.type is DCWeakPointer) {
+          throw DccLowerError('"$context": an @owned Weak argument must be fresh');
+        }
+      }
+      _trackPendingOwner(sources[i], arg, owned: owned);
+      args.add(arg);
+      ownership.add(owned && arg.type is DCHeapPointer);
+    }
+    // The callee's return type is written in terms of the RECEIVER's
+    // type parameters, not this function's -- `T unwrap()` on
+    // `Box<u64>` returns u64 regardless of what `T` means here. Same
+    // shape as ADR-0052's `_lowerCalleeType`, one level up: resolve
+    // against the callee's own bindings, not the caller's.
+    final sourceReturnType =
+        _substituteType(target.function.returnType, methodSubstitution);
+    if (sourceReturnType is VoidType && !allowVoid) {
+      throw DccLowerError('"$context": a void method cannot be used as a value');
+    }
+    final dest = sourceReturnType is VoidType ? null : DCValue(_allocId(),
+        _lowerType(sourceReturnType, context: '$context call to ${target.name.text}'));
+    _addInstr(Call(
+      dest: dest,
+      targetName: linkName,
+      args: args,
+      // The receiver is BORROWED (ADR-0019's default): the caller keeps
+      // its reference for the duration of the call, so the callee must
+      // not release it. Same convention as any non-@owned heap param.
+      argOwnership: ownership,
+    ));
+    _pendingOwners.length = pendingDepth;
+    _releaseTemporary(expr.receiver, receiver);
+    for (var i = 0; i < params.length; i++) {
+      if (!_hasMarkerAnnotation(params[i].annotations, '_Owned', preludeUri)) {
+        _releaseTemporary(sources[i], args[i + 1]);
+      }
+    }
+    return dest;
+  }
+
   DCValue _lowerExpression(Expression expr) {
     if (expr is BoolLiteral) return _booleanLiteral(expr.value);
     if (expr is LogicalExpression) return _lowerLogical(expr);
@@ -3334,85 +3432,7 @@ class _BareFunctionLowerer {
           target.kind == ProcedureKind.Method &&
           enclosing != null &&
           heapLayouts.extendsHeapObject(enclosing)) {
-        // (ADR-0054) Which INSTANTIATION's method body this call goes to.
-        // Resolved BEFORE the receiver is lowered, so a failure names the
-        // call rather than surfacing later as a missing symbol.
-        final inst = _instanceOfReceiver(
-            expr.receiver, enclosing, 'the call to "${target.name.text}"');
-        final methodSubstitution = {...inst.substitution};
-        final methodParams = target.function.typeParameters;
-        final methodArgs = expr.arguments.types.map(_resolveTypeParameter).toList();
-        if (methodParams.length != methodArgs.length) {
-          throw DccLowerError('"$context": method type argument count does not match');
-        }
-        for (var i = 0; i < methodParams.length; i++) {
-          methodSubstitution[methodParams[i]] = methodArgs[i];
-        }
-        var linkName = methodLinkName(inst.mangledName, target.name.text);
-        if (methodParams.isNotEmpty) {
-          linkName = specializationLinkName(linkName, methodArgs);
-          pendingSpecializations.putIfAbsent(linkName,
-              () => _Specialization(target, methodSubstitution, inst));
-        }
-
-        final pendingDepth = _pendingOwners.length;
-        final receiver = _lowerExpression(expr.receiver);
-        _trackPendingOwner(expr.receiver, receiver);
-        final args = <DCValue>[receiver];
-        final ownership = <bool>[false];
-        final params = target.function.positionalParameters;
-        final sources = expr.arguments.positional;
-        if (params.length != sources.length || expr.arguments.named.isNotEmpty) {
-          throw DccLowerError('"$context": methods require all positional arguments');
-        }
-        for (var i = 0; i < params.length; i++) {
-          final arg = _lowerExpression(sources[i]);
-          final expected = _lowerType(
-            _substituteType(params[i].type, methodSubstitution),
-            context: '$context method argument $i',
-          );
-          if (arg.type != expected) {
-            throw DccLowerError('"$context": method argument $i has type '
-                '${arg.type}, expected $expected');
-          }
-          final owned = _hasMarkerAnnotation(params[i].annotations, '_Owned', preludeUri);
-          if (owned && !_isFreshHeapOwnership(sources[i])) {
-            if (arg.type is DCHeapPointer) _addInstr(Retain(object: arg));
-            if (arg.type is DCWeakPointer) {
-              throw DccLowerError('"$context": an @owned Weak argument must be fresh');
-            }
-          }
-          _trackPendingOwner(sources[i], arg, owned: owned);
-          args.add(arg);
-          ownership.add(owned && arg.type is DCHeapPointer);
-        }
-        // The callee's return type is written in terms of the RECEIVER's
-        // type parameters, not this function's -- `T unwrap()` on
-        // `Box<u64>` returns u64 regardless of what `T` means here. Same
-        // shape as ADR-0052's `_lowerCalleeType`, one level up: resolve
-        // against the callee's own bindings, not the caller's.
-        final returnType = _lowerType(
-          _substituteType(target.function.returnType, methodSubstitution),
-          context: '$context call to ${target.name.text}',
-        );
-        final dest = DCValue(_allocId(), returnType);
-        _addInstr(Call(
-          dest: dest,
-          targetName: linkName,
-          args: args,
-          // The receiver is BORROWED (ADR-0019's default): the caller keeps
-          // its reference for the duration of the call, so the callee must
-          // not release it. Same convention as any non-@owned heap param.
-          argOwnership: ownership,
-        ));
-        _pendingOwners.length = pendingDepth;
-        _releaseTemporary(expr.receiver, receiver);
-        for (var i = 0; i < params.length; i++) {
-          if (!_hasMarkerAnnotation(params[i].annotations, '_Owned', preludeUri)) {
-            _releaseTemporary(sources[i], args[i + 1]);
-          }
-        }
-        return dest;
+        return _lowerInstanceMethodCall(expr, target, enclosing)!;
       }
 
       if (target.name.text == 'propagate' &&

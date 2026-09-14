@@ -146,4 +146,5 @@ those notes through ADR-0084. It does not close broader subrequirements or the
 publication gate, and later changes require newer evidence.
 
 - Generic methods (GAP-0055): value-returning specialization and identity-based
-  type substitution implemented; void-method paths and platform checks remain.
+  type substitution implemented, with void calls and discarded-result cleanup.
+  Other method forms and platform checks remain.

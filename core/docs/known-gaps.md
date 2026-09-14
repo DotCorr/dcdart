@@ -404,8 +404,9 @@ what keeps a wrong "fresh" impossible to write and this gap honest.
 
 **Development progress (ADR-0088):** value-returning generic methods now specialize
 for receiver-class and method type arguments, including shadowed names and
-borrowed/owned heap arguments. Type bindings use parameter identity. Void-method
-paths and platform verification remain pending; this entry is not closed.
+borrowed/owned heap arguments. Type bindings use parameter identity. Void calls
+and discarded-result cleanup also pass local regressions. Other method forms
+and platform verification remain pending; this entry is not closed.
 
 
 **Domain:** dcc-lower (M3)

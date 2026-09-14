@@ -1,7 +1,7 @@
 # ADR-0088 — Generic method specialization
 
-Status: value-returning methods implemented in development; void-method paths
-and platform verification remain pending.
+Status: value and void method calls implemented in development; platform
+verification and other method forms remain pending.
 Date: 2026-09-14.
 
 Specialize a generic instance method for the combination of its receiver class
@@ -20,5 +20,8 @@ class instantiations, multiple method argument types, nested method calls,
 shadowed parameter names, and borrowed/owned generic heap parameters returning
 objects. Two thousand calls must return the expected value with zero live heap
 objects. Existing generic function/class regressions protect the substitution
-migration. Void methods and other remaining method forms must be completed and
-verified before GAP-0055 is closed.
+migration. The statement path now shares the same call lowering, supports void
+methods and releases discarded heap/weak results. Tests include generic pointer
+writes, owned fresh and borrowed arguments, temporary receivers, discarded
+scalars and heap results, and implicit void-return cleanup. Other remaining
+method forms and platform verification are required before GAP-0055 is closed.
