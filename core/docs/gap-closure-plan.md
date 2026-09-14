@@ -144,3 +144,6 @@ exact source SHA, CI run and platform scopes. Earlier iteration notes saying
 "pending" describe their state at implementation time; this checkpoint supersedes
 those notes through ADR-0084. It does not close broader subrequirements or the
 publication gate, and later changes require newer evidence.
+
+- Generic methods (GAP-0055): value-returning specialization and identity-based
+  type substitution implemented; void-method paths and platform checks remain.

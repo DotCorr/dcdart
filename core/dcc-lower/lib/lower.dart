@@ -36,6 +36,7 @@ import 'dart:convert';
 
 import 'package:dc_ir/dc_ir.dart';
 import 'package:kernel/kernel.dart';
+import 'package:kernel/type_algebra.dart' as type_algebra;
 
 import 'kernel_frontend.dart';
 
@@ -237,7 +238,7 @@ Future<DCModule> lowerToDCModule(
             externNames,
             globalNames,
             hoister,
-            null,
+            entry.value.receiver,
             pendingSpecializations,
             entry.value.substitution,
             stringLiterals,
@@ -300,8 +301,8 @@ Future<DCModule> lowerToDCModule(
           // a template even after the CLASS is instantiated -- it would need
           // one body per (class instantiation x method type arguments) pair,
           // which this drain does not produce. Skipped here rather than
-          // lowered into a body with `R` unbound; the call site refuses it by
-          // name.
+          // lowered into a body with `R` unbound; the call site queues a
+          // specialization carrying both receiver and method bindings.
           if (proc.function.typeParameters.isNotEmpty) continue;
           functions.add(
             _BareFunctionLowerer(
@@ -1089,7 +1090,7 @@ class _BareFunctionLowerer {
 
   /// (ADR-0052) `T` -> the concrete type, when lowering a specialization.
   /// Empty for an ordinary function.
-  final Map<String, DartType> typeSubstitution;
+  final Map<TypeParameter, DartType> typeSubstitution;
 
   /// (ADR-0055) String literal content -> its `.rodata` symbol name.
   /// Interned by content across the whole module.
@@ -3333,28 +3334,27 @@ class _BareFunctionLowerer {
           target.kind == ProcedureKind.Method &&
           enclosing != null &&
           heapLayouts.extendsHeapObject(enclosing)) {
-        // (ADR-0054, GAP-0055) A method with its own type parameters would
-        // need one body per (class instantiation x method type arguments)
-        // pair. Refused here, by name: without this the failure surfaces as
-        // ADR-0052's "type parameter has no binding ... which is a dcc-lower
-        // bug", which is both confusing and wrong -- this is an unimplemented
-        // shape, not a broken invariant.
-        if (target.function.typeParameters.isNotEmpty) {
-          throw DccLowerError(
-            '"$context": "${enclosing.name}.${target.name.text}" is a GENERIC '
-            'METHOD. Generic classes are monomorphized (ADR-0054) and generic '
-            'top-level functions are (ADR-0052), but a generic method on a '
-            'class is neither and is not implemented — see '
-            'docs/known-gaps.md GAP-0055. Make it a generic top-level '
-            'function taking the receiver as its first parameter.',
-          );
-        }
-
         // (ADR-0054) Which INSTANTIATION's method body this call goes to.
         // Resolved BEFORE the receiver is lowered, so a failure names the
         // call rather than surfacing later as a missing symbol.
         final inst = _instanceOfReceiver(
             expr.receiver, enclosing, 'the call to "${target.name.text}"');
+        final methodSubstitution = {...inst.substitution};
+        final methodParams = target.function.typeParameters;
+        final methodArgs = expr.arguments.types.map(_resolveTypeParameter).toList();
+        if (methodParams.length != methodArgs.length) {
+          throw DccLowerError('"$context": method type argument count does not match');
+        }
+        for (var i = 0; i < methodParams.length; i++) {
+          methodSubstitution[methodParams[i]] = methodArgs[i];
+        }
+        var linkName = methodLinkName(inst.mangledName, target.name.text);
+        if (methodParams.isNotEmpty) {
+          linkName = specializationLinkName(linkName, methodArgs);
+          pendingSpecializations.putIfAbsent(linkName,
+              () => _Specialization(target, methodSubstitution, inst));
+        }
+
         final pendingDepth = _pendingOwners.length;
         final receiver = _lowerExpression(expr.receiver);
         _trackPendingOwner(expr.receiver, receiver);
@@ -3368,7 +3368,7 @@ class _BareFunctionLowerer {
         for (var i = 0; i < params.length; i++) {
           final arg = _lowerExpression(sources[i]);
           final expected = _lowerType(
-            _substituteType(params[i].type, inst.substitution),
+            _substituteType(params[i].type, methodSubstitution),
             context: '$context method argument $i',
           );
           if (arg.type != expected) {
@@ -3392,13 +3392,13 @@ class _BareFunctionLowerer {
         // shape as ADR-0052's `_lowerCalleeType`, one level up: resolve
         // against the callee's own bindings, not the caller's.
         final returnType = _lowerType(
-          _substituteType(target.function.returnType, inst.substitution),
+          _substituteType(target.function.returnType, methodSubstitution),
           context: '$context call to ${target.name.text}',
         );
         final dest = DCValue(_allocId(), returnType);
         _addInstr(Call(
           dest: dest,
-          targetName: methodLinkName(inst.mangledName, target.name.text),
+          targetName: linkName,
           args: args,
           // The receiver is BORROWED (ADR-0019's default): the caller keeps
           // its reference for the duration of the call, so the callee must
@@ -3815,11 +3815,11 @@ class _BareFunctionLowerer {
     // type parameter, and the failure surfaced much later as an
     // "unsupported struct field type TypeParameterType" naming a class the
     // programmer never wrote.
-    final calleeSubstitution = <String, DartType>{};
+    final calleeSubstitution = <TypeParameter, DartType>{};
     for (var i = 0; i < typeParams.length; i++) {
       final name = typeParams[i].name;
       if (name == null) continue;
-      calleeSubstitution[name] = _resolveTypeParameter(expr.arguments.types[i]);
+      calleeSubstitution[typeParams[i]] = _resolveTypeParameter(expr.arguments.types[i]);
     }
     final resolved = _substituteType(type, calleeSubstitution);
     if (resolved is TypeParameterType) {
@@ -3855,7 +3855,7 @@ class _BareFunctionLowerer {
     if (!pendingSpecializations.containsKey(mangled)) {
       pendingSpecializations[mangled] = _Specialization(target, {
         for (var i = 0; i < typeParams.length; i++)
-          typeParams[i].name!: typeArgs[i],
+          typeParams[i]: typeArgs[i],
       });
     }
     return mangled;
@@ -4888,7 +4888,7 @@ class _BareFunctionLowerer {
 
   DartType _resolveTypeParameter(DartType type) {
     if (type is TypeParameterType) {
-      final concrete = typeSubstitution[type.parameter.name];
+      final concrete = typeSubstitution[type.parameter];
       if (concrete == null) {
         throw DccLowerError(
           '"$context": type parameter "${type.parameter.name}" has no '
@@ -5550,7 +5550,7 @@ final class _HoistedClosure {
   /// The enclosing function's `T` -> concrete-type map (ADR-0052), inherited
   /// so a local function declared inside a specialization resolves its own
   /// signature the same way its enclosing body does.
-  final Map<String, DartType> typeSubstitution;
+  final Map<TypeParameter, DartType> typeSubstitution;
 
   const _HoistedClosure(
     this.node,
@@ -5696,8 +5696,9 @@ final class _ClosureScan extends RecursiveVisitor {
 /// (ADR-0052).
 final class _Specialization {
   final Procedure proc;
-  final Map<String, DartType> substitution;
-  const _Specialization(this.proc, this.substitution);
+  final Map<TypeParameter, DartType> substitution;
+  final _ClassInstance? receiver;
+  const _Specialization(this.proc, this.substitution, [this.receiver]);
 }
 
 /// (ADR-0054) A class plus the concrete types it is instantiated at --
@@ -5724,7 +5725,7 @@ final class _ClassInstance {
 
   /// `T` -> the concrete type, for lowering this instantiation's fields and
   /// method bodies.
-  Map<String, DartType> get substitution {
+  Map<TypeParameter, DartType> get substitution {
     if (typeArgs.isEmpty) return const {};
     final params = cls.typeParameters;
     if (params.length != typeArgs.length) {
@@ -5733,7 +5734,7 @@ final class _ClassInstance {
         'instantiated with ${typeArgs.length} type arguments',
       );
     }
-    final result = <String, DartType>{};
+    final result = <TypeParameter, DartType>{};
     for (var i = 0; i < params.length; i++) {
       final name = params[i].name;
       if (name == null) {
@@ -5743,7 +5744,7 @@ final class _ClassInstance {
           'invariant break, not a source error',
         );
       }
-      result[name] = typeArgs[i];
+      result[params[i]] = typeArgs[i];
     }
     return result;
   }
@@ -5814,26 +5815,8 @@ int _typeArgNesting(DartType type) {
 /// was no generic type to nest it inside. `Box<T>` inside a generic function
 /// or a generic class's field is exactly that nesting, so substitution has
 /// to be structural now rather than a single map lookup.
-DartType _substituteType(DartType type, Map<String, DartType> substitution) {
-  if (substitution.isEmpty) return type;
-  if (type is TypeParameterType) {
-    final name = type.parameter.name;
-    if (name == null) return type;
-    return substitution[name] ?? type;
-  }
-  if (type is InterfaceType && type.typeArguments.isNotEmpty) {
-    final args = [
-      for (final arg in type.typeArguments) _substituteType(arg, substitution),
-    ];
-    var changed = false;
-    for (var i = 0; i < args.length; i++) {
-      if (!identical(args[i], type.typeArguments[i])) changed = true;
-    }
-    if (!changed) return type;
-    return InterfaceType(type.classNode, type.declaredNullability, args);
-  }
-  return type;
-}
+DartType _substituteType(DartType type, Map<TypeParameter, DartType> substitution) =>
+    type_algebra.substitute(type, substitution);
 
 /// The emitted symbol name for a monomorphized generic (ADR-0052).
 ///

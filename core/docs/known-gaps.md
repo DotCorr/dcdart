@@ -402,6 +402,12 @@ what keeps a wrong "fresh" impossible to write and this gap honest.
 
 ## GAP-0055 — Generic METHODS on classes are not implemented
 
+**Development progress (ADR-0088):** value-returning generic methods now specialize
+for receiver-class and method type arguments, including shadowed names and
+borrowed/owned heap arguments. Type bindings use parameter identity. Void-method
+paths and platform verification remain pending; this entry is not closed.
+
+
 **Domain:** dcc-lower (M3)
 **Status:** OPEN — refused by name at the call site, not half-handled
 
