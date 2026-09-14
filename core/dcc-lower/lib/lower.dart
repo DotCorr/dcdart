@@ -965,6 +965,7 @@ class _BareFunctionLowerer {
   final _HeapLayouts heapLayouts;
   late final String context = hoistedBody?.linkName ?? proc.name.text;
   late final DCType _declaredReturnType;
+  bool _returnsNull = false;
 
   final Map<VariableDeclaration, DCValue> _values = {};
 
@@ -1233,6 +1234,7 @@ class _BareFunctionLowerer {
         ? const DCVoid()
         : _lowerType(fn.returnType, context: '$context return type');
     _declaredReturnType = returnType;
+    _returnsNull = _resolveTypeParameter(fn.returnType) is NullType;
 
     _startBlock(_allocBlockId(), paramValues);
 
@@ -1263,7 +1265,7 @@ class _BareFunctionLowerer {
     if (_blockOpen) {
       final lastIsReturn = _currentInstructions.isNotEmpty && _currentInstructions.last is Return;
       if (!lastIsReturn) {
-        if (returnType is! DCVoid) {
+        if (returnType is! DCVoid && !_returnsNull) {
           throw DccLowerError(
             '"$context": body falls off the end without a return, but the '
             'return type is $returnType, not void — this should have been '
@@ -1279,7 +1281,7 @@ class _BareFunctionLowerer {
         // operation, so the entire function was the missing release).
         _releaseHeapLocals(exceptDecl: null);
         _releaseWeakLocals(exceptDecl: null);
-        _addInstr(const Return());
+        _addInstr(Return(value: _returnsNull ? _lowerExpression(NullLiteral()) : null));
       }
       _finishBlock();
     }
@@ -2327,7 +2329,7 @@ class _BareFunctionLowerer {
     if (expr == null) {
       _releaseHeapLocals(exceptDecl: null);
       _releaseWeakLocals(exceptDecl: null);
-      _addInstr(const Return());
+      _addInstr(Return(value: _returnsNull ? _lowerExpression(NullLiteral()) : null));
       return;
     }
     final value = _lowerExpression(expr);
@@ -5032,6 +5034,8 @@ DCType _lowerSignatureType(
   required _HeapLayouts heapLayouts,
   required String context,
 }) {
+  // Null has one value, represented exactly like the existing null literal.
+  if (type is NullType) return const DCHeapPointer(DCVoid());
   if (type is InterfaceType &&
       type.classReference.canonicalName?.name == 'bool' &&
       type.classReference.canonicalName?.parent?.name == 'dart:core') {

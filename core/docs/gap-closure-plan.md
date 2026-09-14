@@ -150,6 +150,6 @@ publication gate, and later changes require newer evidence.
   Other method forms and platform checks remain.
 
 - Local call statements (ADR-0089): void calls and discarded-result cleanup
-  implemented; equality capture scanning repaired. Track inferred Null returns,
-  and capturing environments as remaining closure work. Boolean signatures and
-  capture scanning are implemented in ADR-0090; platform checks pending.
+  implemented; equality capture scanning repaired. Boolean signatures and
+  capture scanning are implemented in ADR-0090; inferred/declared Null returns
+  in ADR-0091. Capturing environments remain open; platform checks pending.

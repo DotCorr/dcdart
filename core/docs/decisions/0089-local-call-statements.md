@@ -26,3 +26,6 @@ reference, addressed subsequently in ADR-0090. Inferred Null returns and capturi
 environments remain follow-up work.
 The test uses an explicit void function type for the anonymous function. This
 change does not claim general closure support.
+
+Follow-up: ADR-0091 implements inferred/declared Null returns and removes the
+explicit void annotation from the regression. Capturing environments remain open.

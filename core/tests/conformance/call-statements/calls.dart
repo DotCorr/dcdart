@@ -18,7 +18,7 @@ void exercise(Pointer<u64> output) {
     out.value = out.value + u64(1);
     recursive(out, n - u64(1));
   }
-  final void Function(Pointer<u64>) expression = (Pointer<u64> out) { out.value = out.value + u64(2); };
+  final expression = (Pointer<u64> out) { out.value = out.value + u64(2); };
   final box = Box(u64(9));
   if (!equal(u64(4), u64(4)) || !invert(false)) {
     output.value = u64(0);
@@ -27,6 +27,13 @@ void exercise(Pointer<u64> output) {
   write(output, u64(40));
   recursive(output, u64(3));
   expression(output);
+  final inferred = (Pointer<u64> out, @owned Box value) {
+    if (value.value == u64(0)) return;
+    out.value = out.value + value.value;
+  };
+  inferred(output, Box(u64(0)));
+  final nullResult = inferred(output, Box(u64(2)));
+  if (nullResult != null) { output.value = u64(0); return; }
   consume(Box(u64(1)));
   consume(box);
   borrow(Box(u64(1)));
@@ -46,3 +53,10 @@ bool Function(bool) getNegate() => negate;
 void storeBool(Pointer<bool> output, bool input) { output.value = input; }
 @bare
 bool loadBool(Pointer<bool> input) => input.value;
+
+@bare
+Null nothing() { return null; }
+@bare
+Null empty() {}
+@bare
+Null Function() getNothing() => nothing;
