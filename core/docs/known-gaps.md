@@ -665,7 +665,8 @@ Escalation 0007.
 ## GAP-0038 — Nullable source checks exist; foreign heap pointers remain unchecked
 
 **Domain:** frontend, backend
-**Status:** PARTIAL — source null safety verified; invalid foreign-pointer defense remains open
+**Status:** PARTIAL — source null safety verified; allocation-state field checks
+implemented in development (ADR-0103), broader foreign-pointer defense remains open
 
 The 2026-09-14 regression disproved the earlier claim that discarding nullability in DC-IR
 lets an unchecked nullable access compile. The Dart frontend rejects `Node? x; x.value`

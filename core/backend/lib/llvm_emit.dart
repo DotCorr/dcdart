@@ -210,6 +210,7 @@ String emitModule(
       (b) => b.body.any(
         (i) =>
             i is Alloc ||
+            (i is PtrOffset && i.base.type is DCHeapPointer) ||
             i is Retain ||
             i is RetainWeak ||
             i is MakeWeak ||
@@ -269,14 +270,15 @@ String emitModule(
     if (externalHeapRuntime) {
       final count = sizeClasses.length;
       buffer.writeln('@dc_heap = external global [$count x [$regionBytes x i8]]');
+      buffer.writeln('@dc_heap_state = external global [${count * regionBytes ~/ _minSizeClassBytes} x i8]');
       buffer.writeln('@dc_heap_bump = external global [$count x i64]');
       buffer.writeln('@dc_heap_free = external global [$count x ptr]');
       buffer.writeln('@dc_heap_live = external global i64');
       buffer.writeln('@dc_heap_sizes = external constant [$count x i64]');
       // A retained relocation makes incompatible runtime layouts fail at link
       // time, before either allocator can compute an address using the wrong stride.
-      buffer.writeln('@dc_heap_layout_v1_$regionBytes = external constant i8');
-      buffer.writeln('@dc_heap_required_layout = internal constant ptr @dc_heap_layout_v1_$regionBytes');
+      buffer.writeln('@dc_heap_layout_v2_$regionBytes = external constant i8');
+      buffer.writeln('@dc_heap_required_layout = internal constant ptr @dc_heap_layout_v2_$regionBytes');
       buffer.writeln('@llvm.used = appending global [1 x ptr] [ptr @dc_heap_required_layout], section "llvm.metadata"');
     } else {
       buffer.write(_emitHeapGlobals(regionBytes, sizeClasses));
@@ -648,7 +650,7 @@ void _emitInstruction(DCInstruction instruction, _FunctionEmitter e, {required S
       e.line('%v${instruction.dest.id.index} = inttoptr $addrType %v${instruction.address.id.index} to ptr');
     case PtrOffset():
       if (instruction.base.type is DCHeapPointer) {
-        _emitNonNullGuard(instruction.base, e);
+        _emitManagedAddressGuard(instruction.base, e);
       }
       e.line(
         '%v${instruction.dest.id.index} = getelementptr i8, ptr '
@@ -1366,6 +1368,7 @@ const _reservedGlobalNames = {
   'dc_heap_free',
   'dc_heap_live',
   'dc_heap_sizes',
+  'dc_heap_state',
 };
 
 /// One `@rodata` global: `@name = internal constant <init>, align N`.
@@ -1599,7 +1602,7 @@ String emitHeapRuntime({required String targetTriple, int? regionBytes,
   }
   return 'target triple = "$targetTriple"\n' +
       _emitHeapGlobals(regionBytes, _sizeClassesFor(regionBytes)) +
-      '@dc_heap_layout_v1_$regionBytes = constant i8 0\n';
+      '@dc_heap_layout_v2_$regionBytes = constant i8 0\n';
 }
 
 String _emitHeapGlobals(int regionBytes, List<int> sizeClasses) {
@@ -1608,6 +1611,7 @@ String _emitHeapGlobals(int regionBytes, List<int> sizeClasses) {
   buffer.writeln(
     '@dc_heap = global [$classCount x [$regionBytes x i8]] zeroinitializer',
   );
+  buffer.writeln('@dc_heap_state = global [${classCount * regionBytes ~/ _minSizeClassBytes} x i8] zeroinitializer');
   buffer.writeln('@dc_heap_bump = global [$classCount x i64] zeroinitializer');
   buffer.writeln('@dc_heap_free = global [$classCount x ptr] zeroinitializer');
   // LIVE-OBJECT COUNT. Incremented by Alloc, decremented when a block goes
@@ -1730,6 +1734,7 @@ void _emitAlloc(
     '%$block = phi ptr [ %$freeHead, %$popLabel ], [ %$fresh, %$doBumpLabel ]',
   );
 
+  _emitSlotState('%$block', 1, e);
   final weakPtr = e.freshName('weakptr');
   final clsPtr = e.freshName('clsptr');
   e.line('store i32 1, ptr %$block'); // strong = 1
@@ -1943,6 +1948,7 @@ void _emitFreeSlotPushback(
   _FunctionEmitter e,
   int regionBytes,
 ) {
+  _emitSlotState('%$headerVar', 0, e);
   final shift = _shiftFor(regionBytes);
   final classCount = e.sizeClasses.length;
   final headerInt = e.freshName('hdrint');
@@ -2065,6 +2071,62 @@ void _emitMakeWeak(MakeWeak instruction, _FunctionEmitter e, String context) {
   e.line(
     '%v${instruction.dest.id.index} = getelementptr i8, ptr %v${instruction.object.id.index}, i64 0',
   );
+}
+
+// One byte per minimum-size slot; only actual managed block starts are marked.
+void _emitSlotState(String header, int state, _FunctionEmitter e) {
+  final address = e.freshName('stateaddr');
+  final base = e.freshName('statebase');
+  final delta = e.freshName('statedelta');
+  final index = e.freshName('stateindex');
+  final slot = e.freshName('stateslot');
+  final count = e.sizeClasses.length * e.heapRegionBytes ~/ _minSizeClassBytes;
+  e.line('%$address = ptrtoint ptr $header to i64');
+  e.line('%$base = ptrtoint ptr @dc_heap to i64');
+  e.line('%$delta = sub i64 %$address, %$base');
+  e.line('%$index = udiv i64 %$delta, $_minSizeClassBytes');
+  e.line('%$slot = getelementptr [$count x i8], ptr @dc_heap_state, i64 0, i64 %$index');
+  e.line('store i8 $state, ptr %$slot');
+}
+
+void _emitManagedAddressGuard(DCValue object, _FunctionEmitter e) {
+  final bytes = e.sizeClasses.length * e.heapRegionBytes;
+  final count = bytes ~/ _minSizeClassBytes;
+  final address = e.freshName('managedaddr');
+  final base = e.freshName('managedbase');
+  final payloadDelta = e.freshName('payloaddelta');
+  final delta = e.freshName('manageddelta');
+  final outside = e.freshName('outsideheap');
+  final trap = e.freshLabel('invalidManaged');
+  final inside = e.freshLabel('insideHeap');
+  final valid = e.freshLabel('validManaged');
+  e.line('%$address = ptrtoint ptr %v${object.id.index} to i64');
+  e.line('%$base = ptrtoint ptr @dc_heap to i64');
+  e.line('%$payloadDelta = sub i64 %$address, %$base');
+  e.line('%$delta = sub i64 %$payloadDelta, $_headerSizeBytes');
+  e.line('%$outside = icmp uge i64 %$delta, $bytes');
+  e.terminate('br i1 %$outside, label %$trap, label %$inside');
+  e.startBlock(inside);
+  final remainder = e.freshName('slotremainder');
+  final aligned = e.freshName('slotaligned');
+  final index = e.freshName('managedindex');
+  final slot = e.freshName('managedslot');
+  final state = e.freshName('managedstate');
+  final allocated = e.freshName('isallocated');
+  final good = e.freshName('goodmanaged');
+  e.line('%$remainder = urem i64 %$delta, $_minSizeClassBytes');
+  e.line('%$aligned = icmp eq i64 %$remainder, 0');
+  e.line('%$index = udiv i64 %$delta, $_minSizeClassBytes');
+  e.line('%$slot = getelementptr [$count x i8], ptr @dc_heap_state, i64 0, i64 %$index');
+  e.line('%$state = load i8, ptr %$slot');
+  e.line('%$allocated = icmp eq i8 %$state, 1');
+  e.line('%$good = and i1 %$aligned, %$allocated');
+  e.terminate('br i1 %$good, label %$valid, label %$trap');
+  e.startBlock(trap);
+  declareTrapIntrinsic(e.declaredIntrinsics);
+  e.line('call void @llvm.trap()');
+  e.terminate('unreachable');
+  e.startBlock(valid);
 }
 
 void _emitNonNullGuard(DCValue object, _FunctionEmitter e) {

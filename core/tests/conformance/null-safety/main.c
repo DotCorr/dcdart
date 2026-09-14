@@ -1,8 +1,13 @@
 #include "valid.h"
 #include <stdio.h>
 extern uint64_t dc_heap_live;
+extern unsigned char dc_heap[];
 int main(int argc, char **argv) { if(argc>1) {
-  if(argv[1][0]=='r') foreignRead(0);
+  if(argv[1][0]=='u') foreignRead(dc_heap+16);
+  else if(argv[1][0]=='f') foreignRead((void*)(uintptr_t)1);
+  else if(argv[1][0]=='s') { void *p=make(); destroy(p); foreignRead(p); }
+  else if(argv[1][0]=='i') { void *p=make(); foreignRead((char*)p+1); }
+  else if(argv[1][0]=='r') foreignRead(0);
   else if(argv[1][0]=='w') foreignWrite(0);
   else asserted(0);
   return 99;

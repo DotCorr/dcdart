@@ -13,3 +13,5 @@ class Generic<T> extends HeapObject { final T value; Generic(this.value); T get(
 
 @bare u64 foreignRead(Node node) => node.value;
 @bare void foreignWrite(Node node) { node.value = u64(1); }
+
+@bare void destroy(@owned Node node) {}

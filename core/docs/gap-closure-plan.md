@@ -197,3 +197,7 @@ publication gate, and later changes require newer evidence.
 - Foreign null field access (ADR-0102 / GAP-0038): explicit null traps added
   for managed field reads/writes with C regressions. Arbitrary non-null pointer
   validity and lifetime defense remain open; platform checks pending.
+
+- Managed allocation-state checks (ADR-0103 / GAP-0038): separate slot metadata
+  rejects invalid addresses before field access; shared runtime layout is v2.
+  Type/liveness/reused-address and other header checks remain open.

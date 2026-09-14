@@ -57,7 +57,7 @@ int main(void) {
           '${dir.path}/a.o', '${dir.path}/b.o', '${dir.path}/$runtime.o', '-o', exe]);
         if (runtime == 'wrong') {
           expect(link.exitCode, isNot(0));
-          expect(link.stderr, contains('dc_heap_layout_v1_4096'));
+          expect(link.stderr, contains('dc_heap_layout_v2_4096'));
         } else {
           expect(link.exitCode, 0, reason: '${link.stdout}\n${link.stderr}');
           expect(Process.runSync(exe, []).exitCode, 0);
