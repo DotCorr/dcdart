@@ -201,3 +201,7 @@ publication gate, and later changes require newer evidence.
 - Managed allocation-state checks (ADR-0103 / GAP-0038): separate slot metadata
   rejects invalid addresses before field access; shared runtime layout is v2.
   Type/liveness/reused-address and other header checks remain open.
+
+- Reference header validation (ADR-0104 / GAP-0038): allocation-state and
+  count checks precede ARC header access; underflow/resurrection and increment
+  overflow paths trap. Type/reuse/field-liveness/raw-allocation checks remain open.

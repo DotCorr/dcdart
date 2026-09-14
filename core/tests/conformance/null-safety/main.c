@@ -3,7 +3,17 @@
 extern uint64_t dc_heap_live;
 extern unsigned char dc_heap[];
 int main(int argc, char **argv) { if(argc>1) {
-  if(argv[1][0]=='u') foreignRead(dc_heap+16);
+  if(argv[1][0]=='d') dropWeak((void*)(uintptr_t)1);
+  else if(argv[1][0]=='g') copyWeak((void*)(uintptr_t)1);
+  else if(argv[1][0]=='h') makeWeak((void*)(uintptr_t)1);
+  else if(argv[1][0]=='o') { void *p=make(); ((uint32_t*)p)[-4]=UINT32_MAX; copy(p); }
+  else if(argv[1][0]=='z') { void *p=make(); ((uint32_t*)p)[-4]=0; destroy(p); }
+  else if(argv[1][0]=='e') weakRead(make());
+  else if(argv[1][0]=='q') { void *p=make(); ((uint32_t*)p)[-3]=UINT32_MAX; makeWeak(p); }
+  else if(argv[1][0]=='a') copy((void*)(uintptr_t)1);
+  else if(argv[1][0]=='b') destroy((void*)(uintptr_t)1);
+  else if(argv[1][0]=='c') weakRead((void*)(uintptr_t)1);
+  else if(argv[1][0]=='u') foreignRead(dc_heap+16);
   else if(argv[1][0]=='f') foreignRead((void*)(uintptr_t)1);
   else if(argv[1][0]=='s') { void *p=make(); destroy(p); foreignRead(p); }
   else if(argv[1][0]=='i') { void *p=make(); foreignRead((char*)p+1); }

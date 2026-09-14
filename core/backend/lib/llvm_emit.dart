@@ -1774,6 +1774,8 @@ void _emitRetain(Retain instruction, _FunctionEmitter e, String context) {
   e.terminate('br i1 %$isNull, label %$doneLabel, label %$doLabel');
 
   e.startBlock(doLabel);
+  _emitManagedAddressGuard(instruction.object, e);
+  _emitCountGuard(instruction.object, 0, e, room: true);
   final header = e.freshName('hdr');
   final strong = e.freshName('strong');
   final newStrong = e.freshName('newstrong');
@@ -2003,6 +2005,8 @@ void _emitRelease(Release instruction, _FunctionEmitter e, String context) {
   e.terminate('br i1 %$relNull, label %$doneLabel, label %$liveLabel');
 
   e.startBlock(liveLabel);
+  _emitManagedAddressGuard(instruction.object, e);
+  _emitCountGuard(instruction.object, 0, e);
   e.line('%$header = getelementptr i8, ptr %v${instruction.object.id.index}, i64 -$_headerSizeBytes');
   e.line('%$strong = load i32, ptr %$header');
   e.line('%$newStrong = sub i32 %$strong, 1');
@@ -2129,6 +2133,33 @@ void _emitManagedAddressGuard(DCValue object, _FunctionEmitter e) {
   e.startBlock(valid);
 }
 
+// Call only after allocation-state validation makes the header readable.
+void _emitCountGuard(DCValue object, int offset, _FunctionEmitter e,
+    {bool positive = true, bool room = false}) {
+  final pointer = e.freshName('countcheckptr');
+  final count = e.freshName('countcheck');
+  final invalid = e.freshName('badcount');
+  final trap = e.freshLabel('countTrap');
+  final valid = e.freshLabel('countValid');
+  e.line('%$pointer = getelementptr i8, ptr %v${object.id.index}, i64 ${offset - _headerSizeBytes}');
+  e.line('%$count = load i32, ptr %$pointer');
+  if (positive && room) {
+    final zero = e.freshName('countzero');
+    final full = e.freshName('countfull');
+    e.line('%$zero = icmp eq i32 %$count, 0');
+    e.line('%$full = icmp eq i32 %$count, -1');
+    e.line('%$invalid = or i1 %$zero, %$full');
+  } else {
+    e.line('%$invalid = icmp eq i32 %$count, ${room ? -1 : 0}');
+  }
+  e.terminate('br i1 %$invalid, label %$trap, label %$valid');
+  e.startBlock(trap);
+  declareTrapIntrinsic(e.declaredIntrinsics);
+  e.line('call void @llvm.trap()');
+  e.terminate('unreachable');
+  e.startBlock(valid);
+}
+
 void _emitNonNullGuard(DCValue object, _FunctionEmitter e) {
   final missing = e.freshName('nullassert');
   final trap = e.freshLabel('nulltrap');
@@ -2143,6 +2174,10 @@ void _emitNonNullGuard(DCValue object, _FunctionEmitter e) {
 }
 
 void _emitWeakRetain(DCValue object, _FunctionEmitter e) {
+  _emitManagedAddressGuard(object, e);
+  if (object.type is DCHeapPointer) _emitCountGuard(object, 0, e);
+  _emitCountGuard(object, 4, e,
+      positive: object.type is DCWeakPointer, room: true);
   final header = e.freshName('hdr');
   final weakPtr = e.freshName('weakptr');
   final weakVal = e.freshName('weakval');
@@ -2162,6 +2197,9 @@ void _emitWeakRetain(DCValue object, _FunctionEmitter e) {
 /// an artifact of ONE instruction needing two different values on two
 /// paths, with no DC-IR-level block boundary involved).
 void _emitWeakLoad(WeakLoad instruction, _FunctionEmitter e, String context) {
+  _emitManagedAddressGuard(instruction.weak, e);
+  _emitCountGuard(instruction.weak, 4, e);
+  _emitCountGuard(instruction.weak, 0, e, positive: false, room: true);
   final header = e.freshName('hdr');
   final strongVal = e.freshName('strongval');
   final isDead = e.freshName('isdead');
@@ -2196,6 +2234,8 @@ void _emitWeakLoad(WeakLoad instruction, _FunctionEmitter e, String context) {
 /// deliberately left as a zombie. If `strong` is nonzero, the target is
 /// still alive (through some other strong reference) -- nothing to free.
 void _emitDropWeak(DropWeak instruction, _FunctionEmitter e, String context) {
+  _emitManagedAddressGuard(instruction.object, e);
+  _emitCountGuard(instruction.object, 4, e);
   final header = e.freshName('hdr');
   final weakPtr = e.freshName('weakptr');
   final weakVal = e.freshName('weakval');

@@ -15,3 +15,11 @@ class Generic<T> extends HeapObject { final T value; Generic(this.value); T get(
 @bare void foreignWrite(Node node) { node.value = u64(1); }
 
 @bare void destroy(@owned Node node) {}
+
+@bare Node copy(Node node) => node;
+@bare Node? weakRead(Weak<Node> node) => node.value;
+
+@bare Weak<Node> makeWeak(Node node) => Weak<Node>.fromStrong(node);
+
+@bare void dropWeak(@owned Weak<Node> node) {}
+@bare Weak<Node> copyWeak(Weak<Node> node) => node;
