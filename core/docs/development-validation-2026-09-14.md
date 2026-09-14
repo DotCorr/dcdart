@@ -31,10 +31,15 @@ managed-array or generic-method requirements.
 
 ## Changes after that checkpoint
 
-Shift boundaries (ADR-0085), pointer control flow (0086), and unconditional loops
-(0087) have their own local regressions and newer CI runs. Do not attribute the
-61-suite checkpoint to these later changes. Their later run results must be
-recorded before a release containing them is called validated.
+A newer checkpoint, `af3cba983ed4826703cb7411f81a6d7ddee109ef`, passed
+[run 34791292147](https://github.com/DotCorr/dcdart/actions/runs/34791292147)
+on all four hosts. Inspected logs show **65 conformance suites, zero failures and
+zero skips**, plus **52 optimizer and 17 backend tests** on macOS ARM64 and both
+Linux hosts. Windows passed the packaged-compiler regression subset. This adds
+shift boundaries (ADR-0085), pointer control flow (0086), unconditional loops
+(0087) and value-returning generic methods (0088) to the earlier checkpoint.
+Void method calls and local-call statements were implemented after this SHA and
+require their own later platform results.
 
 Release completion still requires a new immutable version, package-manager
 manifests, live playground deployment and synchronized website/docs verification.

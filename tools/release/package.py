@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix='dcdart-smoke-') as td:
     exe=temp/('smoke.exe' if windows else 'smoke')
     run(['clang',temp/'host.c',obj,'-o',exe]); run([exe])
 # Exercise the packaged compiler against the release's semantic regressions.
-for suite, source in [('temporary-ownership','temporary'), ('boolean','boolean'), ('propagate-ownership','propagate'), ('null-safety','valid'), ('signed-int','signed'), ('extern-address','address'), ('pointer-signature','pointer'), ('str-ffi','text'), ('numeric-convert','convert'), ('compare-exchange','cas'), ('shift-boundaries','shift'), ('pointer-control-flow','flow'), ('unconditional-for','loop'), ('generic-method','method')]:
+for suite, source in [('temporary-ownership','temporary'), ('boolean','boolean'), ('propagate-ownership','propagate'), ('null-safety','valid'), ('signed-int','signed'), ('extern-address','address'), ('pointer-signature','pointer'), ('str-ffi','text'), ('numeric-convert','convert'), ('compare-exchange','cas'), ('shift-boundaries','shift'), ('pointer-control-flow','flow'), ('unconditional-for','loop'), ('generic-method','method'), ('call-statements','calls')]:
     case = root/'core/tests/conformance'/suite
     if not case.exists(): continue
     with tempfile.TemporaryDirectory(prefix='dcdart-regression-') as td:

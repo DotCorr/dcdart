@@ -148,3 +148,8 @@ publication gate, and later changes require newer evidence.
 - Generic methods (GAP-0055): value-returning specialization and identity-based
   type substitution implemented, with void calls and discarded-result cleanup.
   Other method forms and platform checks remain.
+
+- Local call statements (ADR-0089): void calls and discarded-result cleanup
+  implemented; equality capture scanning repaired. Track inferred Null returns,
+  boolean local return declarations and capturing environments as remaining
+  closure work. Platform checks pending.

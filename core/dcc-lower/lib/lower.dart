@@ -1625,34 +1625,23 @@ class _BareFunctionLowerer {
           return;
         }
       }
-      // (ADR-0057) A local function called for effect rather than for a value.
-      // Not lowered: nothing in examples/m2-closure needs it, and this file's
-      // scope rule is to extend on a real target rather than speculatively.
-      // Named explicitly so the diagnostic points at the actual restriction
-      // instead of the generic list below.
       if (expr is LocalFunctionInvocation || expr is FunctionInvocation) {
-        // (ADR-0060) A call THROUGH A POINTER is lowered in statement
-        // position, because a void callback invoked for effect
-        // (`onEach(item);`) is the ordinary shape of the thing this unit
-        // exists for -- unlike a void LOCAL function called as a statement,
-        // which ADR-0057 left unimplemented for want of a real case and
-        // which still is.
-        if (expr is FunctionInvocation && _calleeOf(expr) == null) {
-          final result = _lowerIndirectCall(
-            _lowerCalleeValue(expr),
-            expr.arguments,
-            allowVoid: true,
+        final callee = _calleeOf(expr);
+        final arguments = expr is LocalFunctionInvocation
+            ? expr.arguments : (expr as FunctionInvocation).arguments;
+        DCValue? result;
+        if (callee != null) {
+          result = _lowerLocalCall(callee, arguments, allowVoid: true);
+        } else if (expr is FunctionInvocation) {
+          result = _lowerIndirectCall(
+            _lowerCalleeValue(expr), arguments, allowVoid: true,
             what: 'the called function pointer',
           );
-          if (result != null) _releaseTemporary(expr, result);
-          return;
+        } else {
+          throw DccLowerError('"$context": unresolved local function call');
         }
-        throw DccLowerError(
-          '"$context": a call to a local function is only lowered in '
-          'EXPRESSION position — bind the result to a local '
-          '(`final _unused = f(...);`). A void local function called as a '
-          'statement is not implemented (ADR-0057)',
-        );
+        if (result != null) _releaseTemporary(expr, result);
+        return;
       }
       throw DccLowerError(
         '"$context": unsupported expression statement $expr '
@@ -5656,6 +5645,14 @@ final class _ClosureScan extends RecursiveVisitor {
   final Set<VariableDeclaration> valueUses = {};
   final Set<VariableDeclaration> callUses = {};
   bool usesThis = false;
+
+  @override
+  void visitEqualsCall(EqualsCall node) {
+    // Sized equality has an unbound dart:core Object.== reference in the
+    // trimmed component. Capture analysis needs its operands, not that member.
+    node.left.accept(this);
+    node.right.accept(this);
+  }
 
   @override
   void visitVariableDeclaration(VariableDeclaration node) {
