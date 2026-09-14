@@ -113,6 +113,10 @@ jobs:
           args=()
           if [ "$REQUIRE_TRUST" = true ]; then args+=(--require-trust); fi
           python tools/release/finalize.py "$STAGE" "${args[@]}"
+          for archive in dist/*.tar.gz dist/*.zip; do
+            [ -f "$archive" ] || continue
+            python tools/release/check-archive.py "$archive" "${args[@]}"
+          done
       - name: Run compiler conformance and optimizer tests
         if: runner.os != 'Windows'
         shell: bash
