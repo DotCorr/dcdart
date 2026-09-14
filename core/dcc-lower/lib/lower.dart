@@ -2456,6 +2456,7 @@ class _BareFunctionLowerer {
   /// check for every call site that needs this distinction, rather than
   /// re-deriving it per site as each was discovered.
   bool _isFreshHeapOwnership(Expression expr) {
+    if (expr is ConditionalExpression) return true;
     if (expr is NullCheck) return _isFreshHeapOwnership(expr.operand);
     if (expr is ConstructorInvocation || expr is StaticInvocation) return true;
     // (ADR-0057) A call to a hoisted local function is a call to a `@bare`
@@ -2613,7 +2614,41 @@ class _BareFunctionLowerer {
     return dest;
   }
 
+  DCValue _lowerConditional(ConditionalExpression expr) {
+    final condition = _lowerExpression(expr.condition);
+    if (condition.type is! DCBool) {
+      throw DccLowerError('"$context": conditional expression requires bool');
+    }
+    final yes = _allocBlockId();
+    final no = _allocBlockId();
+    final merge = _allocBlockId();
+    _addInstr(CondBranch(cond: condition, trueTarget: yes, trueArgs: const [],
+        falseTarget: no, falseArgs: const []));
+    _finishBlock();
+    DCValue branch(Expression source, BlockId block) {
+      _startBlock(block, const []);
+      final value = _lowerExpression(source);
+      if (!_isFreshHeapOwnership(source)) {
+        if (value.type is DCHeapPointer) _addInstr(Retain(object: value));
+        if (value.type is DCWeakPointer) _addInstr(RetainWeak(object: value));
+      }
+      _addInstr(Branch(target: merge, args: [value]));
+      _finishBlock();
+      return value;
+    }
+    final left = branch(expr.then, yes);
+    final right = branch(expr.otherwise, no);
+    if (left.type != right.type) {
+      throw DccLowerError('"$context": conditional branches have incompatible '
+          'types ${left.type} and ${right.type}');
+    }
+    final result = DCValue(_allocId(), left.type);
+    _startBlock(merge, [result]);
+    return result;
+  }
+
   DCValue _lowerExpression(Expression expr) {
+    if (expr is ConditionalExpression) return _lowerConditional(expr);
     if (expr is NullCheck) {
       final value = _lowerExpression(expr.operand);
       if (value.type is! DCHeapPointer) {

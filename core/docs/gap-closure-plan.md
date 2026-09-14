@@ -185,3 +185,7 @@ publication gate, and later changes require newer evidence.
 - Local/callback result receivers (ADR-0099 / GAP-0056): named and anonymous
   local results, inferred function-pointer results and generic callback-parameter
   results support chained methods. Other expression shapes remain open.
+
+- Conditional values (ADR-0100): lazy branch selection and fresh/borrowed
+  managed ownership implemented with nested/null/temporary regressions.
+  Void-valued conditional statements remain open; platform checks pending.
