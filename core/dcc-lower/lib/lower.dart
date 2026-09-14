@@ -2456,6 +2456,7 @@ class _BareFunctionLowerer {
   /// check for every call site that needs this distinction, rather than
   /// re-deriving it per site as each was discovered.
   bool _isFreshHeapOwnership(Expression expr) {
+    if (expr is NullCheck) return _isFreshHeapOwnership(expr.operand);
     if (expr is ConstructorInvocation || expr is StaticInvocation) return true;
     // (ADR-0057) A call to a hoisted local function is a call to a `@bare`
     // function under a different spelling, so it transfers ownership out by
@@ -2613,6 +2614,14 @@ class _BareFunctionLowerer {
   }
 
   DCValue _lowerExpression(Expression expr) {
+    if (expr is NullCheck) {
+      final value = _lowerExpression(expr.operand);
+      if (value.type is! DCHeapPointer) {
+        throw DccLowerError('"$context": null assertion requires a heap reference');
+      }
+      _addInstr(AssertNonNull(object: value));
+      return value;
+    }
     if (expr is BoolLiteral) return _booleanLiteral(expr.value);
     if (expr is LogicalExpression) return _lowerLogical(expr);
     if (expr is VariableGet) {
@@ -4909,8 +4918,20 @@ class _BareFunctionLowerer {
   }
 
   _ClassInstance? _receiverInstanceOrNull(Expression receiver) {
+    if (receiver is NullCheck) return _receiverInstanceOrNull(receiver.operand);
     if (receiver is ThisExpression) return receiverInstance;
     if (receiver is VariableGet) return _instanceFromType(receiver.variable.type);
+    if (receiver is StaticInvocation) {
+      final parameters = receiver.target.function.typeParameters;
+      final arguments = receiver.arguments.types;
+      if (parameters.length != arguments.length) return null;
+      final bindings = {...typeSubstitution};
+      for (var i = 0; i < parameters.length; i++) {
+        bindings[parameters[i]] = _resolveTypeParameter(arguments[i]);
+      }
+      return _instanceFromType(
+          _substituteType(receiver.target.function.returnType, bindings));
+    }
     if (receiver is ConstructorInvocation) {
       return _instanceFromArgs(
           receiver.target.enclosingClass, receiver.arguments.types);

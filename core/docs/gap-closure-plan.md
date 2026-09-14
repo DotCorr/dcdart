@@ -173,3 +173,7 @@ publication gate, and later changes require newer evidence.
 - Mutable weak locals (ADR-0096): reassignment, loop/branch ownership and
   borrowed managed-parameter replacement implemented and tested locally.
   General assignment expressions remain separate; platform checks pending.
+
+- Null assertions (ADR-0097): heap-reference assertions preserve ownership
+  and produce checked traps on null. Static-call generic receiver recovery is
+  implemented. Other nullable representations remain open; platform checks pending.

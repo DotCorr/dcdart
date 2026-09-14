@@ -1289,3 +1289,12 @@ final class CondBranch extends DCTerminator {
   @override
   DCValue? get result => null;
 }
+
+/// Assert that a nullable heap reference is non-null, trapping otherwise.
+/// Does not acquire or release ownership and evaluates no other expression.
+final class AssertNonNull extends DCInstruction {
+  final DCValue object;
+  const AssertNonNull({required this.object});
+  @override
+  DCValue? get result => null;
+}

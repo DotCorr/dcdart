@@ -787,6 +787,20 @@ void _emitInstruction(DCInstruction instruction, _FunctionEmitter e, {required S
       _emitRetain(instruction, e, context);
     case Release():
       _emitRelease(instruction, e, context);
+    case AssertNonNull():
+      if (instruction.object.type is! DCHeapPointer) {
+        throw BackendError('$context: AssertNonNull requires a heap reference');
+      }
+      final missing = e.freshName('nullassert');
+      final trap = e.freshLabel('nulltrap');
+      final valid = e.freshLabel('nonnull');
+      e.line('%$missing = icmp eq ptr %v${instruction.object.id.index}, null');
+      e.terminate('br i1 %$missing, label %$trap, label %$valid');
+      e.startBlock(trap);
+      declareTrapIntrinsic(e.declaredIntrinsics);
+      e.line('call void @llvm.trap()');
+      e.terminate('unreachable');
+      e.startBlock(valid);
     case RetainWeak():
       _emitWeakRetain(instruction.object, e);
     case MakeWeak():

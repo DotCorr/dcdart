@@ -1655,6 +1655,7 @@ Set<int> referencedValueIds(DCInstruction instruction) {
       args.forEach(ref);
     case Retain(:final object):
     case Release(:final object):
+    case AssertNonNull(:final object):
     case RetainWeak(:final object):
     case DropWeak(:final object):
       ref(object);

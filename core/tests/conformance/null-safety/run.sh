@@ -11,3 +11,5 @@ grep -q 'potentially null' "$TMP/invalid.log"
 dart "$CORE/dcc/bin/dcc.dart" build --mode bare --target host "$HERE/valid.dart" -o "$TMP/valid.o" --emit-header "$TMP/valid.h"
 clang -I"$TMP" "$HERE/main.c" "$TMP/valid.o" -o "$TMP/test"
 "$TMP/test"
+
+python3 "$HERE/check-traps.py" "$TMP/test"
